@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "dataset_id": "synthetic-demo-v1",
+  "kind": "synthetic",
+  "description": "Invented references for numerical demonstrations only. Not a real gazetteer.",
+  "records": [
+    {"source_id": "demo:origin", "name": "Demo Origin", "lat": 0, "lon": 0, "feature_type": "city"},
+    {"source_id": "demo:east", "name": "Demo East", "lat": 0, "lon": 90, "feature_type": "town"},
+    {"source_id": "demo:west", "name": "Demo West", "lat": 0, "lon": -90, "feature_type": "landmark"},
+    {"source_id": "demo:dateline", "name": "Demo Dateline", "lat": 0, "lon": 179.9, "feature_type": "island"},
+    {"source_id": "demo:north", "name": "Demo North", "lat": 89.9, "lon": 0, "feature_type": "mountain"},
+    {"source_id": "demo:south", "name": "Demo South", "lat": -89.9, "lon": 0, "feature_type": "remote_settlement"}
+  ]
+}

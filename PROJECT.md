@@ -1,0 +1,198 @@
+# TinyGeo — Compact Offline Geographic Context from Coordinates
+
+## Project objective
+
+Build a small, self-contained Python package that converts a latitude/longitude pair or a time series of coordinates into **useful, human-readable geographic context**, entirely offline at runtime.
+
+The central idea is a carefully selected gazetteer of approximately **10,000 geographically representative reference locations** worldwide—not administrative polygons. The database should include cities, towns, notable landmarks, islands, mountains, and other named geographic features. For each query, return nearby reference points, distances and bearings, and a concise, appropriately qualified description.
+
+This is **approximate geographic context**, **not authoritative reverse geocoding**. In particular, the country or state associated with the nearest feature must *not* be presented as the verified country/state containing an arbitrary query coordinate.
+
+The runtime environment **does have NumPy**. Prioritize simplicity, accuracy, and vectorized batch performance over a strict standard-library-only implementation. A pure-Python fallback is desirable but not required for the first milestone.
+
+## Desired outcomes
+
+1. `locate(lat, lon)` returns useful geographic context for one position.
+2. `locate_many(positions)` efficiently handles N×2 or N×3 arrays (lat, lon, optional altitude), preserving order, and also accepts ordinary Python sequences.
+3. `describe_track(positions, ...)` optionally compresses a trajectory to meaningful geographic transitions rather than duplicating nearly identical descriptions.
+4. A reproducible, separately run **database builder** generates the shipping dataset from open geographic sources. No downloads or network operations at runtime.
+5. A compact distribution: **target ≤ 1 MB compressed data** for roughly 10,000 reference locations, with actual size reported by the build process. This is a target rather than a hard constraint; do not sacrifice needed geographic coverage merely to meet it.
+6. Evaluation scripts and tests measure geographic usefulness, numerical correctness, speed, and comparisons to `reverse_geocoder`.
+
+## Repository layout (suggested)
+
+```text
+tinygeo/
+  PROJECT.md
+  README.md
+  pyproject.toml
+  src/tinygeo/
+    __init__.py
+    lookup.py          # single and batch queries
+    track.py           # trajectory summarization
+    data.py            # compact embedded data OR package resource loader
+  tools/
+    build_geodb.py     # downloads/prepares source data; not used at runtime
+    evaluate.py        # validation and benchmark suite
+  data_sources/         # downloaded inputs; gitignored unless license permits
+  tests/
+    test_lookup.py
+    test_track.py
+    test_boundaries.py
+  LICENSES.md           # source attributions, versions, and licenses
+```
+
+The initial implementation may be smaller; avoid unnecessary infrastructure.
+
+## Database design
+
+### Record schema
+
+Each geographic point should contain:
+
+- latitude, longitude (WGS84 decimal degrees)
+- human-readable UTF-8 name
+- feature type: e.g. `city`, `town`, `landmark`, `mountain`, `lake`, `island`, `remote_settlement`, `other`
+- country code (ISO 3166-1 alpha-2 where meaningful and known)
+- administrative region/state/province when available
+- optional population or significance score
+- source ID (e.g., GeoNames ID) for reproducibility and traceability
+
+Altitude is accepted in position inputs but **ignored for geographic nearest-neighbor matching** in v1; report this clearly. Do not accidentally treat altitude as longitude or vice versa.
+
+### Sources and licensing
+
+Start with **GeoNames** as the primary gazetteer. Investigate its downloadable population-filtered city files and feature classes, including appropriate regional/natural features. Supplement notable cultural or historical landmarks only when a freely distributable, appropriately licensed source is available. Maintain source URLs, access date, file versions/checksums if feasible, and required attribution. Respect source-specific licenses and attribution requirements (GeoNames is generally CC BY 4.0; check the exact sources used). Make the builder deterministic from a fixed, documented input snapshot and configuration.
+
+Avoid hand-creating hundreds of famous sites. Use a small, auditable curated override list only to correct obvious gaps or prioritize especially recognizable places.
+
+### Geographic selection: don't take the 10,000 largest cities
+
+Optimize for **recognizability and spatial coverage**. Suggested rough allocation, tunable rather than hard-coded:
+
+| Group | Approximate count | Selection goal |
+|---|---:|---|
+| Major metropolitan settlements | 2,000 | Familiarity, population, national/regional capitals |
+| Smaller regional towns/settlements | 5,000 | Geographic coverage and local context |
+| Natural geographic features | 1,500 | Mountains, lakes, islands, deserts, capes, etc. |
+| Historic/cultural sites & landmarks | 1,000 | Recognizable named places |
+| Remote/polar/island features | 500 | Fill sparse coverage gaps |
+| **Total** | **10,000** | Tunable |
+
+Implement a **reproducible selection algorithm** rather than relying only on population rank. A useful starting point:
+
+1. Seed globally important settlements, capitals, and a modest set of highly significant named sites.
+2. Assign candidate weights for population/significance, feature class, and whether a region is underserved.
+3. Greedily add candidates that improve geographic coverage, e.g. weighted farthest-point sampling, with sensible spatial caps so extremely remote points do not consume most of the budget.
+4. Ensure each continent, major island group, and remote populated region receives reasonable coverage; sample oceans/polar areas separately if meaningful features exist.
+5. Deduplicate locations that coincide or are the same site under variant names; retain separate feature classes where useful.
+6. Produce a diagnostic coverage report and map of the selected locations (optional visualization; Matplotlib is sufficient).
+
+Avoid overconcentration in Europe, east Asia, and the northeastern U.S. while also avoiding overrepresentation of arbitrary nearly uninhabited points. Treat administrative boundary areas and coastlines as ambiguous unless true boundary data is added later.
+
+### Packaging and compression
+
+Try two approaches and measure both:
+
+- **Preferred for maintainability:** ship a compressed binary resource (e.g. `.gz` or `.npz`) with the Python package.
+- **Optional single-file distribution:** embed `gzip` + Base64 data into a Python module, decoded on first use.
+
+A compact, versioned format with scaled integer coordinates (e.g. 1e-4 degrees), indexed/shared strings, feature-class IDs, and optional population/significance is appropriate. Measure actual compressed size; avoid making a complicated custom format without demonstrable value. Preserve Unicode names and attribution metadata. Decode/load **once**, not for every lookup. Avoid runtime dependencies beyond NumPy/SciPy and the standard library.
+
+## Runtime lookup design
+
+Use a spherical spatial index (preferably `scipy.spatial.cKDTree` built on 3D unit-sphere Cartesian coordinates) to handle the antimeridian and poles cleanly:
+
+```python
+lat_r = np.deg2rad(lat)
+lon_r = np.deg2rad(lon)
+xyz = np.column_stack((
+    np.cos(lat_r) * np.cos(lon_r),
+    np.cos(lat_r) * np.sin(lon_r),
+    np.sin(lat_r),
+))
+```
+
+Nearest-neighbor ranking on the unit sphere uses chord distance and is equivalent to great-circle distance ordering. Convert candidate results to great-circle distances in km and calculate initial bearings (0–360 degrees clockwise from north) for presentation. Use a consistent mean Earth radius (e.g. 6371.0088 km); document that this is a spherical approximation, not an ellipsoidal geodesic.
+
+Support feature filters (e.g. settlement-only, landmark-only, or any) and nearest-*k* results. Important: filtering should occur **before or within indexed querying** as appropriate, not by retrieving an insufficient fixed number of unfiltered neighbors. Separate indexes by broad feature group are acceptable.
+
+Potential public API (refine if needed):
+
+```python
+from tinygeo import locate, locate_many, describe_track
+
+one = locate(42.36, -71.06)
+results = locate_many([(42.36, -71.06), (48.86, 2.35)])
+events = describe_track(positions, min_distance_km=25)
+```
+
+Return ordinary Python dictionaries or documented lightweight dataclasses. An example result *shape* (not verified geographic values):
+
+```python
+{
+    "query": {"lat": 42.36, "lon": -71.06},
+    "nearest": {
+        "name": "...", "feature_type": "city", "region": "...",
+        "country_code": "US", "lat": 0.0, "lon": 0.0,
+        "distance_km": 0.0, "bearing_deg": 0.0
+    },
+    "nearest_settlement": {"name": "...", "distance_km": 0.0},
+    "nearest_landmark": None,
+    "description": "Near ... (reference point approximately ... km away)",
+    "confidence": "nearby_reference"
+}
+```
+
+The `confidence` field describes **proximity to reference locations**, not verified administrative containment. Do not invent country/state for points at sea or near borders. For very remote positions, prefer wording like “approximately 620 km northwest of [place]” rather than “in [place].” Use distance-sensitive text thresholds that can be tuned and documented. Consider exposing both `nearest_any` and class-specific nearest neighbors.
+
+### Ocean and regional descriptions
+
+Ocean coverage is a **stretch goal**, not something the point database can reliably solve on its own. A nearest-island lookup does not establish which ocean, sea, or country contains a coordinate. For v1, use a qualified “nearest known reference point” description offshore. Later, optionally add coarse ocean/major-region polygons or another properly licensed classifier, explicitly keeping it separate from the point gazetteer. Never infer authoritative geographic boundaries from nearest-place country codes.
+
+### Track summaries
+
+`describe_track` should:
+
+- accept ordered coordinates and optional timestamps; preserve original indices/timestamps;
+- use batch lookup internally;
+- return event/segment records with geographic labels and sample ranges;
+- suppress redundant label changes or jitter near Voronoi boundaries (hysteresis or minimum dwell/distance threshold);
+- allow both full-sample annotations and transition-only output;
+- handle antimeridian crossings, stationary tracks, short tracks, and missing/invalid data predictably.
+
+Do not invent timestamps when none were supplied.
+
+## Validation and benchmark plan
+
+Treat **`reverse_geocoder` as a comparison baseline, not ground truth**. It generally targets the nearest populated place, whereas this tool may intentionally choose a nearby geographic feature or a smaller, more geographically representative settlement. Evaluate the **nearest-settlement** mode against it separately.
+
+1. **Numerical checks:** identical point ≈ 0 km; known great-circle cases; coordinates around ±180° longitude; poles; equator; coincident points; invalid latitude/longitude; longitude normalization policy.
+2. **Reference checks:** major world cities; rural interiors; Sahara; Siberia; Australian Outback; remote islands; Antarctica; open ocean; borders/coasts. Ensure descriptions remain appropriately qualified.
+3. **Comparison:** sample globally distributed coordinates and actual settlement coordinates; compare nearest settlement identity and great-circle distance to `reverse_geocoder`; explain disagreements due to database coverage or method rather than calling every disagreement a failure.
+4. **Speed:** benchmark single lookups and batches of 1k, 10k, 100k samples, including cold-load vs warm-query timing, and peak memory usage.
+5. **Coverage:** show distributions of nearest-reference distance for random global samples and for populated-region samples, separately. Test that data selection is not unduly biased by population alone.
+6. **Reproducibility:** rebuilding the same dataset snapshot should produce matching records and a deterministic output hash where practical.
+
+Optional: generate a map of selected locations and a geographic error/coverage heatmap using Matplotlib. Visual inspection is useful here.
+
+## Acceptance criteria for v1
+
+- Runtime operates fully offline, using only NumPy, SciPy, and Python standard library.
+- Reproducibly builds a gazetteer of approximately 10,000 distinct useful records with clear license/source attribution.
+- Provides `locate` and `locate_many` with class-specific nearest references, distance and bearing; `describe_track` has basic transition suppression.
+- Correct for antimeridian and polar test cases, with explicit validation rules for coordinates and altitude handling.
+- Does not claim exact country/state containment from a nearest feature alone.
+- Includes tests, a runnable demo, size measurements, performance metrics, and a summary of baseline comparisons to `reverse_geocoder`.
+- Documents how to regenerate the database, and how to use the runtime in a disconnected environment.
+
+## Suggested implementation order for Codex
+
+1. Implement the minimal runtime on a tiny hand-checked test fixture; establish API and unit tests.
+2. Implement the GeoNames ingester and deterministic 10,000-point selection pipeline; output maps/statistics.
+3. Choose a compressed package format and connect it to the runtime; report actual on-disk and in-memory sizes.
+4. Add track transition logic, edge-case tests, and benchmark scripts.
+5. Compare to `reverse_geocoder` and generate a short evaluation report; tune selection and wording where results are weak.
+6. Optionally implement the embedded Base64 single-file build as a release artifact.
+
+Keep the implementation lean. Prefer working code, measurable geographic quality, and clear limitations to speculative features. If a requirement is ambiguous, choose a documented sensible default and proceed.

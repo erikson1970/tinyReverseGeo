@@ -1,0 +1,2 @@
+include PROJECT.md
+recursive-include examples *.py
