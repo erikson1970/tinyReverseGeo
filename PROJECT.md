@@ -89,12 +89,31 @@ Each geographic point should contain:
 - latitude, longitude (WGS84 decimal degrees)
 - human-readable UTF-8 name
 - feature type: e.g. `city`, `town`, `landmark`, `mountain`, `lake`, `island`, `remote_settlement`, `other`
-- country code (ISO 3166-1 alpha-2 where meaningful and known)
-- administrative region/state/province when available
+- country code (ISO 3166-1 alpha-2 where known), attached only to settlements
+- administrative region/state/province where available, attached only to settlements
 - optional population or significance score
 - source ID (e.g., GeoNames ID) for reproducibility and traceability
 
 Altitude is accepted in position inputs but **ignored for geographic nearest-neighbor matching** in v1; report this clearly. Do not accidentally treat altitude as longitude or vice versa.
+
+### Country labels and future area coverage
+
+Country and administrative labels belong to municipality/settlement references
+(`city`, `town`, `remote_settlement`). New deployment exports set `country_code`
+and administrative `region` to null for physical features and landmarks.
+Original source snapshots retain their provenance metadata.
+
+Do not create standalone country/state/province regions or coverage circles
+representing countries. In particular, there should be no **"Iceland Region"**: country context
+comes from the country metadata on nearby settlements. Area coverage is intended
+for physical features such as oceans, seas, deserts, and mountain ranges.
+
+The proposed next representation adds optional `radius_km` (zero for a point)
+and a shared `feature_id` for multiple coverage circles describing one physical
+feature. Rank approximate area proximity using `max(0, center_distance - radius)`,
+group results by feature ID, and retain both regional context and nearby settlement
+references. Circle membership describes the modeled coverage, not administrative
+containment. This circle representation remains planned work.
 
 ### Sources and licensing
 

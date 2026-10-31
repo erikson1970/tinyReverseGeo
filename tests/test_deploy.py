@@ -117,7 +117,9 @@ def test_end_to_end_offline_build(source, tmp_path, monkeypatch, layout, target)
 
     monkeypatch.setattr(geodb, "urlopen", blocked)
     output = tmp_path / "output"
-    arguments = ["--input", str(source), "--points", "12", "--layout", layout,
+    regions = tmp_path / "admin1CodesASCII.txt"
+    regions.write_text("XX.01\tExample Region\tExample Region\t999\n")
+    arguments = ["--input", str(source), "--admin1", str(regions), "--points", "12", "--layout", layout,
                  "--target", target, "--offline", "--output", str(output)]
     archive, manifest = main(arguments)
     original = archive.read_bytes()
@@ -145,6 +147,14 @@ assert locate(20, 30)['nearest']['name'] == 'Café Peak'
 assert not locate(20, 30)['synthetic']
 db = Gazetteer.from_file({str(output / 'dataset.json.gz')!r})
 assert db.dataset_id == info['dataset_id']
+assert info['selection']['administrative_metadata'] == 'settlements_only'
+for reference in db.records:
+    if reference.feature_type in {{'city', 'town', 'remote_settlement'}}:
+        assert reference.country_code == 'XX'
+        assert reference.region == 'Example Region'
+    else:
+        assert reference.country_code is None
+        assert reference.region is None
 """
     subprocess.run([sys.executable, "-I", "-c", script], check=True, capture_output=True, text=True)
     subprocess.run([sys.executable, str(extracted / "smoke_test.py")], cwd=extracted,

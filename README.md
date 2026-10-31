@@ -95,6 +95,9 @@ unfiltered `nearest_any`, `nearest_settlement`, and `nearest_landmark`, plus a
 qualified description, proximity classification, and dataset identity. Each
 neighbor includes its reference metadata, `distance_km`, and `bearing_deg`.
 Country and region fields describe the reference point, never query containment.
+New deployment builds attach those administrative fields only to settlements;
+physical-feature and landmark records have null administrative fields. Standalone
+country coverage regions are excluded from the planned physical-area model.
 
 - Positions are numeric N×2 or N×3 arrays or rectangular Python sequences.
   The optional third column is altitude; it is preserved and ignored for matching.

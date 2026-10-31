@@ -21,6 +21,7 @@ from tools.geodb import (ALGORITHM, ATTRIBUTION, BASE_URL, LICENSE_URL, Candidat
                         canonical_json, collect_candidates, coverage_report, fetch_source,
                         local_source, select_candidates)
 from tinygeo import Gazetteer
+from tinygeo.lookup import SETTLEMENTS
 
 PROFILES = {"pythonista": {"python_min": "3.10", "scan_pairs": 65_536},
             "python": {"python_min": "3.10", "scan_pairs": 262_144}}
@@ -214,13 +215,18 @@ def deploy(args):
     selected = select_candidates(candidates, args.points, pinned=[c.source_id for c in curated])
     records = [{**c.record, "lat": round(c.record["lat"], args.coordinate_decimals),
                 "lon": round(c.record["lon"], args.coordinate_decimals)} for c in selected]
+    for record in records:
+        if record["feature_type"] not in SETTLEMENTS:
+            record["country_code"] = None
+            record["region"] = None
     # Validate the exact quantized representation that the deployed runtime will read.
     from tinygeo import Reference
     Gazetteer([Reference(**record) for record in records])
     selection = {"algorithm": ALGORITHM, "points": args.points,
                  "coordinate_decimals": args.coordinate_decimals, "salience_seed_fraction": .2,
                  "group_targets": {"settlement": .7, "natural": .2, "landmark": .1},
-                 "coverage_advantage_cap_km": 1000}
+                 "coverage_advantage_cap_km": 1000,
+                 "administrative_metadata": "settlements_only"}
     identity = sha256(canonical_json({"records": records, "selection": selection})).hexdigest()
     dataset = {"schema_version": 1, "dataset_id": "geonames-" + identity[:20],
                "kind": "geographic", "record_count": len(records), "records": records,
@@ -232,7 +238,9 @@ def deploy(args):
               "selection": selection, "ingestion": ingest,
               "pinned_places": len({c.source_id for c in curated}),
               "feature_counts": dict(sorted(Counter(r["feature_type"] for r in records).items())),
-              "country_counts": dict(sorted(Counter(r["country_code"] or "unknown" for r in records).items())),
+              "country_counts": dict(sorted(Counter(
+                  (r["country_code"] or "unknown") if r["feature_type"] in SETTLEMENTS
+                  else "not_applicable" for r in records).items())),
               "coverage": coverage_report([Candidate(r, c.score, c.capital) for r, c in zip(records, selected)], candidates),
               "coverage_notes": ["Global samples are area-uniform, including ocean.",
                                  "Settlement sample is from the retained candidate pool, not population-weighted.",

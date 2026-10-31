@@ -119,6 +119,13 @@ global samples (including oceans) and retained settlement-candidate samples;
 the latter are not a population-weighted independent validation dataset. All
 descriptions retain the runtime's qualified nearest-reference wording.
 
+Country and administrative-region labels are exported only for settlements
+(`city`, `town`, `remote_settlement`). Physical features and landmarks have null
+`country_code`/`region`; their report entries use the `not_applicable` country
+bucket. Raw source snapshots retain their original metadata. Countries and
+administrative areas are excluded as standalone area-coverage entities; the
+planned circle model covers physical regions, with no separate "Iceland Region".
+
 ## Cached, pinned, and offline rebuilds
 
 ```sh
