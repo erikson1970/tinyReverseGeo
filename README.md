@@ -67,6 +67,39 @@ For the original synthetic Pythonista smoke test, see
 Python 3.10 and bundled NumPy. Basic lookups were confirmed by the user on an
 iPhone running Pythonista on 2026-10-31; measured device benchmarks remain pending.
 
+For the current full-world phone trial, choose
+`dist/tinygeo-staggered-pythonista-external-10000/tinygeo.zip`. Extract the whole
+ZIP, preserve its folder structure, and run `smoke_test.py` then
+`pythonista_track.py`. See [the tracking guide](docs/tracking.md) for Start/Stop,
+local history, and device-testing limitations. Other `dist/` builds are checkpoints
+or regional experiments.
+
+## Skill for a sandboxed LLM
+
+[The portable skill](skills/tinygeo-track-context/SKILL.md) explains how to annotate
+observer routes, satellite ground tracks, and astronomical visibility events using
+an externally supplied TinyGeo database. It preserves the astronomy tools' sky
+azimuth/elevation and uses TinyGeo for place context. It also describes geometric
+az/el from existing aligned 3D states, frame/time/height conventions, visibility
+criteria, moving-observer event windows, and sparse-data qualifications.
+
+Build the handoff ZIP with no downloads or builder dependencies:
+
+```sh
+python tools/package_llm_skill.py
+```
+
+Give the other LLM **`dist/tinygeo-track-context-skill.zip` plus your external
+`dataset.json.gz`**. The ZIP contains `SKILL.md`, the NumPy-only runtime, its license,
+and file hashes; it deliberately contains no default database. The sandbox needs
+Python 3.10+ and NumPy. If using the Markdown file alone, also supply the runtime.
+The skill is a project handoff artifact; it does not install itself globally.
+
+Example request: “Use the attached TinyGeo skill and database to annotate my
+observer route. Use the available satellite/astronomy tools to find above-horizon
+windows along it, and show UTC time, place context, azimuth, elevation, and the
+visibility assumptions at each start, peak, and end.”
+
 ## Playground notebook
 
 Open [notebooks/playground.ipynb](notebooks/playground.ipynb) in VS Code or Jupyter.

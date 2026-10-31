@@ -122,6 +122,21 @@ only when its full disk fits in the replacement. Retain finer samples near detai
 See [docs/decisions.md](docs/decisions.md) for defaults and
 alternatives. Dataset schema 2 adds these fields; runtime also reads schema 1.
 
+Next coverage optimization pass (user review, 2026-10-31):
+
+- [ ] Merge additional same-feature ocean circles and extend compaction to broad
+  physical land regions, especially the Antarctic Plateau (156 stored support
+  circles in the current build). Keep country/admin regions excluded. Preserve
+  modeled coverage and protect nearby distinct features; apply land-appropriate
+  boundary guards rather than the ocean merger's land-exclusion rule.
+- [ ] Refine complex/narrow water regions such as the Mediterranean. The current
+  5° sampler generates only eight Mediterranean Sea supports and retains all eight;
+  named sub-seas also contribute context. Allocate finer samples using shape and
+  uncovered-area diagnostics, rather than a uniform global spacing alone.
+- [ ] Measure union coverage, ambiguity/coastal spill, and retained distinct
+  features before/after reallocating the saved circle budget. Sparse dots on the
+  map alone do not measure modeled coverage; outline circles and inspect gaps.
+
 ### Sources and licensing
 
 Start with **GeoNames** as the primary gazetteer. Investigate its downloadable population-filtered city files and feature classes, including appropriate regional/natural features. Supplement notable cultural or historical landmarks only when a freely distributable, appropriately licensed source is available. Maintain source URLs, access date, file versions/checksums if feasible, and required attribution. Respect source-specific licenses and attribution requirements (GeoNames is generally CC BY 4.0; check the exact sources used). Make the builder deterministic from a fixed, documented input snapshot and configuration.

@@ -7,6 +7,15 @@ The earlier successful iPhone test covered the point-lookup library, not this ap
 
 ## Pythonista quick start
 
+For the current phone trial, use
+`dist/tinygeo-staggered-pythonista-external-10000/tinygeo.zip` (dataset
+`tinygeo-c5f36386a63bde416304`, 10,000 records / 7,832 features). This is the
+recommended full-world external-data bundle; older point/physical builds and
+small regional experiments remain in `dist/` as checkpoints.
+
+Extract the **whole ZIP**, keeping `tinygeo/` beside `smoke_test.py` and
+`pythonista_track.py`. Run `smoke_test.py` first, then `pythonista_track.py`.
+
 Build/extract a current real-data deployment following the deployer guide, then
 run `pythonista_track.py` beside its `tinygeo/` package or embedded `tinygeo.py`.
 Tap **Start** and allow location access. The view shows the latest fix/time/age,

@@ -159,3 +159,24 @@ or inventing reference records. Physical-region context remains separately usefu
 Revisit: add licensed source extracts for underrepresented regions/station types,
 or adjust settlement/physical allocation after field examples. A 10,000-row budget
 is an approximation, not exhaustive gazetteer coverage.
+
+## D010 — Reallocate circle density according to regional complexity
+
+User review identified more merge opportunities in open oceans and broad land
+features such as Antarctica, alongside sparse Mediterranean sampling. Inspection
+of the current 10,000-row build finds 156 Antarctic Plateau supports. The sampler
+generates eight Mediterranean Sea supports and retains all eight; named sub-seas
+also contribute context. This example calls for finer input sampling rather than
+only changing the final selection budget.
+
+Next optimization: compact circles within the same physical feature on land as
+well as at sea, and allocate finer samples where narrow/complex shapes leave
+modeled gaps. Preserve existing disk coverage when merging, retain distinct local
+features, and measure coverage/spill before reallocating the freed row budget.
+Land merging needs its own source-geometry guard; the current ocean coast guard
+deliberately prevents growth over land. Country/admin coverage remains excluded.
+
+Keep the current phone trial on a fixed artifact while these changes are designed.
+The recommended trial bundle is `tinygeo-staggered-pythonista-external-10000`,
+dataset `tinygeo-c5f36386a63bde416304`. This entry records the next optimization
+work; it does not claim that land merging or adaptive refinement is implemented.
