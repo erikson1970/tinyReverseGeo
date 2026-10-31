@@ -230,7 +230,9 @@ def deploy(args):
         from tools.natural_earth import load_candidates
         physical, physical_sources, physical_report = load_candidates(
             args.cache.parent / "natural_earth", offline=args.offline, refresh=args.refresh,
-            locked=lock.get("physical_sources", ()) if lock else (), spacing=args.physical_spacing)
+            locked=lock.get("physical_sources", ()) if lock else (), spacing=args.physical_spacing,
+            pattern=args.physical_grid, coarsening=args.ocean_coarsening,
+            ocean_radius_max=args.ocean_radius_max, detail=candidates)
         budget = min(len(physical), int(args.points * args.physical_fraction), args.points-len({c.source_id for c in curated}))
         if budget > 0:
             physical_selected = select_candidates(physical, budget)
@@ -255,7 +257,8 @@ def deploy(args):
                  "administrative_metadata": "settlements_only",
                  "settlement_radii": {"density": density, "minimum_km": args.radius_min,
                     "maximum_km": args.radius_max, "fallback_km": args.radius_fallback, "point_only": args.point_radii},
-                 "physical": {"enabled": use_physical, "fraction": args.physical_fraction, "spacing_degrees": args.physical_spacing}}
+                 "physical": {"enabled": use_physical, "fraction": args.physical_fraction,
+                              **physical_report.get("grid", {})}}
     identity = sha256(canonical_json({"records": records, "selection": selection})).hexdigest()
     feature_count = len({r.get("feature_id") or r["source_id"] for r in records})
     attribution = ATTRIBUTION
@@ -312,6 +315,10 @@ def main(argv=None):
     parser.add_argument("--natural-earth", action="store_true", help="add Natural Earth physical references and coverage circles")
     parser.add_argument("--physical-fraction", type=float, default=.35, help="maximum fraction of rows reserved for physical sources")
     parser.add_argument("--physical-spacing", type=float, default=5.0, help="physical polygon sample spacing, degrees (1–15)")
+    parser.add_argument("--physical-grid", choices=("staggered", "rectangular"), default="staggered")
+    parser.add_argument("--ocean-coarsening", action=argparse.BooleanOptionalAction, default=None,
+                        help="merge remote ocean circles (default on for new builds; off for older locks without a coastline)")
+    parser.add_argument("--ocean-radius-max", type=float, default=1200.0, help="maximum merged ocean-circle radius, km (up to 3000)")
     parser.add_argument("--density-config", type=Path, help="JSON urban-density assumptions with country/region overrides")
     parser.add_argument("--radius-min", type=float, default=.5)
     parser.add_argument("--radius-max", type=float, default=40.0)

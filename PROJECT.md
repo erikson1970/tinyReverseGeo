@@ -116,7 +116,10 @@ group results by feature ID, and retain both regional context and nearby settlem
 references. Circle membership describes the modeled coverage, not administrative
 containment. Overlaps are accepted. Settlement density-based radii are configurable
 heuristics; Natural Earth physical-area samples provide overlapping circles with
-shared feature IDs. See [docs/decisions.md](docs/decisions.md) for defaults and
+shared feature IDs. Offset alternate grid rows by half a cell. Merge remote ocean
+circles where coastal and nearby-feature clearance allows, removing an old circle
+only when its full disk fits in the replacement. Retain finer samples near detail.
+See [docs/decisions.md](docs/decisions.md) for defaults and
 alternatives. Dataset schema 2 adds these fields; runtime also reads schema 1.
 
 ### Sources and licensing

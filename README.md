@@ -11,7 +11,9 @@ labeled; deployment artifacts carry their real source provenance.
 
 The fuzzy-circle milestone adds configurable settlement radii, Natural Earth
 mountains/deserts/seas/oceans, and unique-feature results. Design assumptions and
-tradeoffs are recorded in [docs/decisions.md](docs/decisions.md).
+tradeoffs are recorded in [docs/decisions.md](docs/decisions.md). Physical builds
+use staggered grid rows and merge remote ocean circles while retaining fine detail
+near coasts and other known features; optimization happens entirely at build time.
 
 ## Development
 
@@ -41,7 +43,7 @@ python tools/deploy.py --target pythonista --points 10000 --layout external
 python tools/deploy.py --target python --points 5000 --layout embedded
 # Add physical features and overlapping proximity circles:
 python tools/deploy.py --natural-earth --target pythonista --points 10000 \
-  --output dist/tinygeo-physical-pythonista-external-10000
+  --output dist/tinygeo-staggered-pythonista-external-10000
 ```
 
 The deployer fetches/caches GeoNames snapshots, selects a geographically spread

@@ -43,7 +43,8 @@ other density/footprint data when the gain warrants the input size and complexit
 
 Use Natural Earth's public-domain physical-region/marine/elevation datasets for
 an initial recognizable physical-feature collection. Sample area polygons on a
-5° center grid with an additional interior representative point. Grid circles use
+5° center grid with an additional interior representative point (now staggered;
+see D006). Grid circles use
 the cell's spherical half-diagonal; small polygons can use a smaller extent.
 These are broad, approximate proximity zones, with coastal overlap allowed.
 Shared feature IDs group all support circles for one physical feature.
@@ -64,3 +65,37 @@ for Natural Earth by default; the rest is selected from the other sources.
 Revisit: expose a distinct logical-feature budget if users find stored-row budgets
 less useful. Input feature availability can keep the physical allocation below
 its requested fraction.
+
+## D006 — Stagger rows and merge remote ocean circles
+
+User direction: offset every other row by half a cell to improve coverage, then
+grow circles in uninteresting ocean interiors. Use staggered latitude rows with
+periodic longitude, retaining conservative spherical half-diagonal radii. Latitude
+and longitude steps are reduced slightly when necessary to close the global grid.
+This is a staggered rectangular grid, not an equal-area tessellation; polar rows
+remain more densely sampled. Keep `--physical-grid rectangular` for comparison.
+
+For oceans only, greedily consider centers with the most clearance first. Limit
+growth to 1,200 km by default (`--ocean-radius-max`, capped at 3,000 km). Protect
+coasts using a pinned Natural Earth 110m land mask, shoreline samples no more than
+50 km apart, a 75 km sampling/safety allowance, and a further 10% clearance margin.
+Other known feature centers and their largest radius add another growth limit.
+Check concentric rings against the same source ocean polygon before merging.
+Small islands missing from both the coarse land mask and the reference pool can
+still be missed; these remain approximate context zones.
+
+Remove a support circle only when spherical center distance plus its radius fits
+inside the replacement circle, with a 200 m allowance for exported-coordinate
+rounding. Preserve the feature ID. This preserves the input disks' modeled
+coverage during merging; subsequent fixed-budget selection can still thin it.
+Seas, land regions, and unmerged coastal circles retain their original radii.
+The algorithm is deterministic and records before/after counts in the build report.
+
+Backtrace: commit `903f62f` is the rectangular-grid baseline. Use
+`--no-ocean-coarsening` to isolate the stagger effect. Older three-source locks
+default to no coarsening because they lack the land-mask snapshot; explicit
+coarsening with such a lock fails instead of fetching an unpinned input.
+
+Revisit: adapt latitude spacing or use an equal-area mesh if polar redundancy
+matters. Replace the coarse coast guard only if device/route examples justify
+the added build complexity. Runtime remains a NumPy circle scan.

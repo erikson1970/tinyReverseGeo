@@ -13,7 +13,7 @@ from tinygeo import Gazetteer
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dataset", type=Path, default=root / "dist/tinygeo-physical-pythonista-external-10000/dataset.json.gz")
+    parser.add_argument("--dataset", type=Path, default=root / "dist/tinygeo-staggered-pythonista-external-10000/dataset.json.gz")
     parser.add_argument("--distance-mode", choices=("area", "center"), default="area")
     args = parser.parse_args()
     db = Gazetteer.from_file(args.dataset)

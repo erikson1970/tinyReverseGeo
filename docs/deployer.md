@@ -230,15 +230,27 @@ Curated geopy behavior is covered by mocked/cache tests, without a live account.
 
 ```sh
 .venv/bin/python tools/deploy.py --natural-earth --points 10000 --target pythonista \
-  --output dist/tinygeo-physical-pythonista-external-10000
+  --output dist/tinygeo-staggered-pythonista-external-10000
 ```
 
 `--natural-earth` fetches and pins three small public-domain 10m datasets from
 Natural Earth's physical labels collection: land regions, marine areas, and
-elevation points. Its polygons are sampled on a 5° grid plus an interior anchor.
+elevation points, plus a 110m land mask for ocean-circle optimization. Its polygons
+are sampled on a 5° grid plus an interior anchor. Every other latitude row is
+offset by half a longitude cell (`--physical-grid staggered`, the default).
 Circles overlap and provide approximate nearby context. Island/continent/geoarea
 label polygons are excluded so country-like regions such as Iceland are not
 introduced. Mountain points use a declared 5 km radius assumption.
+
+In remote oceans, the builder grows circles to cover multiple existing circles,
+removing one only if the replacement fully contains it. Coastlines and nearby
+known features constrain growth; seas and land features retain their fine samples.
+`--ocean-radius-max 1200` sets the default radius cap in km. Use
+`--no-ocean-coarsening` and/or `--physical-grid rectangular` for comparisons.
+The source land mask is coarse and does not represent every small island.
+The report records input/output ocean counts and safeguards; see decision D006.
+Older source locks without the mask default to no merging. Start a new unlocked
+build to pin the extra input before enabling merging with a lock.
 
 By default up to 35% of stored rows are reserved for these physical sources.
 `--physical-fraction` and `--physical-spacing` (1–15°) are adjustable. `--points`
@@ -286,3 +298,11 @@ bytes. Both external and embedded layouts were exercised under Python 3.10 with
 only NumPy, with network and build-module imports disabled. A locked external
 rebuild matched byte for byte. Sizes and IDs describe this initial checkpoint and
 will evolve with later builds; manifests are authoritative for a particular artifact.
+
+Staggered/merged checkpoint (`tinygeo-c5f36386a63bde416304`): 10,000 rows /
+7,832 logical features, 333,728-byte gzip database. Ocean support drops from
+1,337 staggered input circles to 1,084 circles after 57 merges (253 fewer, 18.9%).
+Every original ocean disk was checked for containment in the final exported
+dataset's circles, including coordinate quantization. Both layouts passed offline
+Python 3.10.16 / NumPy 1.21.6 checks; a source-locked external rebuild matched
+byte for byte. The notebook outlines merged circles on its Robinson map.
