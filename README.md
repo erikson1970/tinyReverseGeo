@@ -91,6 +91,10 @@ Country and region fields describe the reference point, never query containment.
 3. Track transitions with hysteresis and preserved sample indices/timestamps.
 4. Geographic coverage evaluation, cold/warm benchmarks, and `reverse_geocoder`
    nearest-settlement comparisons.
+5. [Pythonista/iOS release](PROJECT.md#future-release-todo-pythonista--ios-track-companion)
+   with device-location tracking, nearby/passed reference history, and constant-motion
+   projections at 15 minutes, 1 hour, and 2 hours; portable backend and on-device
+   compatibility checks planned.
 
 ## Git and attribution
 

@@ -18,6 +18,7 @@ The runtime environment **does have NumPy**. Prioritize simplicity, accuracy, an
 4. A reproducible, separately run **database builder** generates the shipping dataset from open geographic sources. No downloads or network operations at runtime.
 5. A compact distribution: **target ≤ 1 MB compressed data** for roughly 10,000 reference locations, with actual size reported by the build process. This is a target rather than a hard constraint; do not sacrifice needed geographic coverage merely to meet it.
 6. Evaluation scripts and tests measure geographic usefulness, numerical correctness, speed, and comparisons to `reverse_geocoder`.
+7. Future release: a Pythonista/iOS companion uses this library and the device's reported location for current context, a history of nearby/passed references, and velocity-based projections at 15 minutes, 1 hour, and 2 hours. See the release TODO below; this is outside the first desktop milestone.
 
 ## Repository layout (suggested)
 
@@ -186,6 +187,79 @@ Optional: generate a map of selected locations and a geographic error/coverage h
 - Includes tests, a runnable demo, size measurements, performance metrics, and a summary of baseline comparisons to `reverse_geocoder`.
 - Documents how to regenerate the database, and how to use the runtime in a disconnected environment.
 
+## Future release TODO: Pythonista / iOS track companion
+
+Deliver a versioned, importable Pythonista bundle that uses the shared TinyGeo
+library and offline gazetteer on iPhone/iPad. This is planned work, not currently
+supported functionality or an additional gate for desktop v1.
+
+### Compatibility and packaging recommendation
+
+Pythonista's official documentation, checked **2026-10-31**, advertises Python 3.10,
+bundled NumPy, and an iOS `location` module. SciPy is not listed in the bundled
+third-party modules, so the release should not depend on it. Confirm actual
+versions/imports on the target device before setting the support matrix. The
+current TinyGeo package requires Python >=3.11 and imports SciPy directly; it
+will need a compatibility/backend change before this bundle can work.
+
+Recommend **one shared database, with a portable lookup backend**, rather than a
+separate hand-maintained Python database:
+
+- [ ] Build a versioned gzip-compressed UTF-8 JSON resource, readable with the
+  standard library, from the same selected records and source manifest used by
+  desktop TinyGeo. Preserve Unicode, source IDs, licenses, and attribution.
+- [ ] Add a shared standard-library backend using cached unit-sphere vectors and
+  a linear nearest-*k* scan with feature filtering. Benchmark approximately 10,000
+  records on-device before adding a more complicated index. Use bundled NumPy
+  optionally for vectorized scans; retain SciPy acceleration on desktop.
+- [ ] Keep matching semantics, validation, distances, bearings, and description
+  rules consistent across backends; test their agreement. Avoid importing SciPy
+  or NumPy on the standard-library path. Make the portable code and packaging
+  compatible with the verified Pythonista interpreter without duplicating the
+  library into a separate implementation.
+- [ ] Produce a downloadable ZIP containing the importable library, compressed
+  data, launcher script, attribution, version/checksum manifest, and copy/run
+  instructions. Require no package installation, downloads, or network at runtime.
+
+### Device tracking and presentation
+
+- [ ] Use `location.start_updates()` / `get_location()` for timestamped device
+  fixes, and always call `stop_updates()` on exit. Handle denied permission,
+  unavailable fixes, stale/duplicate timestamps, and poor accuracy when reported.
+  Keep device acquisition separate from track processing so recorded fixes can
+  be replayed on desktop.
+- [ ] Show **where we are now** as current coordinates, fix time/age, and nearby
+  named reference points with distances/bearings and qualified descriptions.
+  Use TinyGeo's offline lookup rather than platform reverse-geocoding services.
+- [ ] Persist a local track history of timestamped fixes and nearby/passed
+  reference events, with original sample ranges, closest observed approach, and
+  configurable proximity/dwell thresholds plus hysteresis. A changing nearest
+  label alone must not imply a visit or passage through a place. Support local
+  history reload and export (e.g. JSON/CSV); show gaps as gaps.
+- [ ] Estimate recent ground speed and course from a configurable window of valid
+  timestamped fixes, using spherical geometry and noise suppression; consider
+  device speed/course only when available and valid. Distinguish stationary,
+  insufficient-history, stale-fix, and unreliable-motion states.
+- [ ] Project positions **15 minutes, 1 hour, and 2 hours** from the latest valid
+  fix using constant ground speed and the estimated initial course along a great
+  circle. Show each projected
+  coordinate, target time, and nearby references through TinyGeo. Label these as
+  extrapolations assuming unchanged motion, not route predictions or assured
+  arrivals. Suppress unreliable moving forecasts; explicitly label stationary
+  projections and recompute when motion changes. Handle poles and the antimeridian.
+- [ ] Provide start/stop controls and a compact current/history/projection view.
+  Begin with foreground recording; verify and document actual behavior during
+  screen lock, backgrounding, interruption, and resume before promising continuous
+  recording. Measure update cadence, battery cost, load time, memory, and lookup
+  latency on a physical iOS device.
+- [ ] Validate replay cases for straight motion, turns, stops/GPS jitter, missing
+  fixes, stale or out-of-order data, and dateline crossings; check all three
+  projection horizons analytically and smoke-test the released bundle on-device.
+
+References: [Pythonista platform capabilities](https://omz-software.com/pythonista/),
+[bundled third-party modules](https://omz-software.com/pythonista/docs-3.4/py3/ios/third-party-modules.html),
+[device location API](https://omz-software.com/pythonista/docs-3.4/py3/ios/location.html).
+
 ## Suggested implementation order for Codex
 
 1. Implement the minimal runtime on a tiny hand-checked test fixture; establish API and unit tests.
@@ -194,5 +268,6 @@ Optional: generate a map of selected locations and a geographic error/coverage h
 4. Add track transition logic, edge-case tests, and benchmark scripts.
 5. Compare to `reverse_geocoder` and generate a short evaluation report; tune selection and wording where results are weak.
 6. Optionally implement the embedded Base64 single-file build as a release artifact.
+7. Build and validate the Pythonista/iOS companion and portable lookup backend described in the future release TODO.
 
 Keep the implementation lean. Prefer working code, measurable geographic quality, and clear limitations to speculative features. If a requirement is ambiguous, choose a documented sensible default and proceed.
