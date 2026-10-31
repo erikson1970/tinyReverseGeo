@@ -10,7 +10,7 @@ def decode_dataset(payload):
     if payload.startswith(b"\x1f\x8b"):
         payload = gzip.decompress(payload)
     data = json.loads(payload.decode("utf-8"))
-    if not isinstance(data, dict) or data.get("schema_version") != 1:
+    if not isinstance(data, dict) or data.get("schema_version") not in {1, 2}:
         raise ValueError("unsupported TinyGeo dataset schema")
     if not isinstance(data.get("records"), list) or not data["records"]:
         raise ValueError("dataset must contain a nonempty records list")

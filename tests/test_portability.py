@@ -12,6 +12,8 @@ import sys
 sys.path.insert(0, {source!r})
 sys.modules['scipy'] = None
 sys.modules['geopy'] = None
+sys.modules['shapely'] = None
+sys.modules['shapefile'] = None
 from tinygeo import locate, locate_many
 assert locate(0, 0)['nearest']['source_id'] == 'demo:origin'
 assert len(locate_many([[0, 0], [0, 90]], k=3)) == 2

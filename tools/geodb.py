@@ -35,7 +35,8 @@ def file_hash(path):
     return digest.hexdigest()
 
 
-def fetch_source(name, cache, *, offline=False, refresh=False, locked=None):
+def fetch_source(name, cache, *, offline=False, refresh=False, locked=None,
+                 base_url=BASE_URL, license_id="CC-BY-4.0"):
     """Cache content-addressed snapshots and verify checksums on every reuse."""
     cache = Path(cache)
     cache.mkdir(parents=True, exist_ok=True)
@@ -44,7 +45,7 @@ def fetch_source(name, cache, *, offline=False, refresh=False, locked=None):
     if info is None and pointer.is_file() and not refresh:
         info = json.loads(pointer.read_text(encoding="utf-8"))
     if info is not None:
-        if info.get("name") != name or info.get("url") != BASE_URL + name:
+        if info.get("name") != name or info.get("url") != base_url + name:
             raise ValueError(f"invalid source metadata for {name}")
         digest = info.get("sha256", "")
         if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
@@ -56,7 +57,7 @@ def fetch_source(name, cache, *, offline=False, refresh=False, locked=None):
             return path, info
     if offline:
         raise ValueError(f"source not cached: {name}; run once without --offline")
-    request = Request(BASE_URL + name, headers={"User-Agent": "TinyGeo-builder/0.1"})
+    request = Request(base_url + name, headers={"User-Agent": "TinyGeo-builder/0.1"})
     temporary = cache / (name + ".download")
     try:
         with urlopen(request, timeout=60) as response, temporary.open("wb") as out:
@@ -71,10 +72,10 @@ def fetch_source(name, cache, *, offline=False, refresh=False, locked=None):
     finally:
         temporary.unlink(missing_ok=True)
     if locked is None:
-        info = {"name": name, "url": BASE_URL + name, "sha256": digest,
+        info = {"name": name, "url": base_url + name, "sha256": digest,
                 "bytes": path.stat().st_size, "last_modified": modified,
                 "retrieved_utc": datetime.now(timezone.utc).isoformat(),
-                "license": "CC-BY-4.0", "kind": "download"}
+                "license": license_id, "kind": "download"}
         pointer.write_bytes(canonical_json(info))
     return path, info
 
@@ -117,7 +118,13 @@ def feature_type(feature_class, code, population):
     if feature_class == "P" and code in {"PPL", "PPLA", "PPLA2", "PPLA3", "PPLA4", "PPLC", "PPLG", "PPLS"}:
         return "city" if population >= 50_000 or code == "PPLC" else (
             "remote_settlement" if 0 < population < 500 else "town")
-    if feature_class == "T" and code in {"MT", "MTS", "PK", "PKS", "VLC"}:
+    if feature_class == "T" and code == "MTS":
+        return "mountain_range"
+    if feature_class == "T" and code == "DSRT":
+        return "desert"
+    if feature_class == "H" and code in {"OCN", "SEA"}:
+        return "ocean" if code == "OCN" else "sea"
+    if feature_class == "T" and code in {"MT", "PK", "PKS", "VLC"}:
         return "mountain"
     if feature_class == "T" and code in {"ISL", "ISLS", "ISLT", "ATOL"}:
         return "island"
@@ -243,6 +250,9 @@ def select_candidates(candidates, count, *, pinned=()):
     if count < 1 or len(candidates) < count:
         raise ValueError(f"requested {count} points but only {len(candidates)} distinct candidates are available")
     by_id = {c.source_id: c for c in candidates}
+    if len(by_id) < count:
+        raise ValueError(f"requested {count} points but only {len(by_id)} distinct source IDs are available")
+    candidates = list(by_id.values())
     pins = sorted(set(pinned))
     if len(pins) > count:
         raise ValueError("pinned places exceed the requested database size")
@@ -257,11 +267,13 @@ def select_candidates(candidates, count, *, pinned=()):
         occupancy[grid_cell(candidate.record, bands)] += 1
 
     settlements = sorted((c for c in candidates if c.group == "settlement"), key=rank)
+    seeded_settlements = sum(c.group == "settlement" for c in chosen.values())
     for c in settlements:
-        if len(chosen) >= max(len(pins), count // 5):
+        if seeded_settlements >= count // 5 or len(chosen) >= count:
             break
         if c.source_id not in chosen:
             add(c)
+            seeded_settlements += 1
 
     def fill(pool, amount):
         while amount > 0:

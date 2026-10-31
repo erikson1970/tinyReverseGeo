@@ -1,10 +1,11 @@
-"""Measure complete lookups on synthetic data; not a geographic quality test."""
+"""Measure complete lookups on synthetic, external, or bundled data."""
 
 import argparse
 import json
 from pathlib import Path
 import platform
 import sys
+from types import SimpleNamespace
 from time import perf_counter
 
 source = Path(__file__).resolve().parents[1] / "src"
@@ -21,6 +22,9 @@ def main():
     parser.add_argument("--records", type=int, default=10_000)
     parser.add_argument("--queries", type=int, default=200)
     parser.add_argument("--batch-size", type=int, default=1000)
+    parser.add_argument("--dataset", type=Path)
+    parser.add_argument("--bundled", action="store_true", default=Path(__file__).name == "benchmark_deployed.py")
+    parser.add_argument("--distance-mode", choices=("area", "center"), default="area")
     args = parser.parse_args()
     if min(args.records, args.queries, args.batch_size) < 1:
         parser.error("record and query counts must be positive")
@@ -35,30 +39,41 @@ def main():
     kinds = ("city", "town", "landmark", "mountain", "island")
     records = [Reference(str(i), f"Synthetic {i}", float(lat), float(lon),
                          kinds[i % len(kinds)])
-               for i, (lat, lon) in enumerate(positions(args.records))]
+               for i, (lat, lon) in enumerate(positions(args.records))] if not (args.dataset or args.bundled) else []
     queries = positions(args.queries)
     batch = positions(args.batch_size)
     start = perf_counter()
-    db = Gazetteer(records, dataset_id="synthetic-benchmark", synthetic=True)
-    db.locate(*queries[0])
+    if args.dataset:
+        db = Gazetteer.from_file(args.dataset)
+        count, identity = len(db.records), db.dataset_id
+    elif args.bundled:
+        from tinygeo import dataset_info, locate, locate_many
+        info = dataset_info()
+        db = SimpleNamespace(locate=locate, locate_many=locate_many)
+        count, identity = info["record_count"], info["dataset_id"]
+    else:
+        db = Gazetteer(records, dataset_id="synthetic-benchmark", synthetic=True)
+        count, identity = len(records), db.dataset_id
+    db.locate(*queries[0], distance_mode=args.distance_mode)
     setup_ms = (perf_counter() - start) * 1000
     timings = []
     for point in queries:
         start = perf_counter()
-        db.locate(*point)
+        db.locate(*point, distance_mode=args.distance_mode)
         timings.append((perf_counter() - start) * 1000)
     start = perf_counter()
-    db.locate_many(batch)
+    db.locate_many(batch, distance_mode=args.distance_mode)
     batch_seconds = perf_counter() - start
     print(json.dumps({
         "python": platform.python_version(), "numpy": np.__version__,
-        "platform": platform.platform(), "records": args.records,
+        "platform": platform.platform(), "records": count, "dataset_id": identity,
+        "distance_mode": args.distance_mode,
         "single_queries": args.queries, "batch_size": args.batch_size,
         "construction_and_first_lookup_ms": setup_ms,
         "warm_single_median_ms": float(np.median(timings)),
         "warm_single_p95_ms": float(np.percentile(timings, 95)),
         "batch_seconds": batch_seconds,
-        "note": "Synthetic data, complete results including formatting; host timings, not iOS.",
+        "note": "Complete results including formatting; timings describe this machine and dataset.",
     }, indent=2))
 
 

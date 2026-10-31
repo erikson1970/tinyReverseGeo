@@ -28,7 +28,7 @@ def test_external_dataset_loading(tmp_path, dataset, compressed):
 
 
 @pytest.mark.parametrize("change", [
-    {"schema_version": 2}, {"records": []}, {"dataset_id": ""},
+    {"schema_version": 3}, {"records": []}, {"dataset_id": ""},
     {"kind": "unknown"}, {"record_count": 999},
 ])
 def test_invalid_dataset_schema(dataset, change):

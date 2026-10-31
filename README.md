@@ -9,6 +9,10 @@ application bundles with a requested point count. Track summaries, the iOS track
 UI, and full geographic evaluation remain pending. Synthetic lookups are explicitly
 labeled; deployment artifacts carry their real source provenance.
 
+The fuzzy-circle milestone adds configurable settlement radii, Natural Earth
+mountains/deserts/seas/oceans, and unique-feature results. Design assumptions and
+tradeoffs are recorded in [docs/decisions.md](docs/decisions.md).
+
 ## Development
 
 Python 3.10 or newer and NumPy >=1.21.6 are required. Development checks cover
@@ -35,6 +39,9 @@ contain portable point data and do not need SciPy or a serialized spatial tree.
 python -m pip install -e '.[builder]'
 python tools/deploy.py --target pythonista --points 10000 --layout external
 python tools/deploy.py --target python --points 5000 --layout embedded
+# Add physical features and overlapping proximity circles:
+python tools/deploy.py --natural-earth --target pythonista --points 10000 \
+  --output dist/tinygeo-physical-pythonista-external-10000
 ```
 
 The deployer fetches/caches GeoNames snapshots, selects a geographically spread
@@ -97,7 +104,17 @@ neighbor includes its reference metadata, `distance_km`, and `bearing_deg`.
 Country and region fields describe the reference point, never query containment.
 New deployment builds attach those administrative fields only to settlements;
 physical-feature and landmark records have null administrative fields. Standalone
-country coverage regions are excluded from the planned physical-area model.
+country coverage regions are excluded from the physical-area model.
+
+`radius_km` defines a fuzzy proximity zone. Queries rank by
+`max(0, center_distance - radius_km)`, then center distance, and return each logical
+`feature_id` once. `distance_km` remains **center distance**; `distance_to_area_km`
+is the gap to estimated coverage, and `within_radius` indicates model membership.
+Use `distance_mode="center"` to compare against point ranking. `nearest_region`
+and `nearby_regions` keep broad context available alongside `nearest_settlement`.
+Overlapping zones are allowed; membership does not verify a visit or boundary.
+Each neighbor describes the best matching support circle for that feature;
+`radius_km` is that circle's radius, not the total extent of the named region.
 
 - Positions are numeric N×2 or N×3 arrays or rectangular Python sequences.
   The optional third column is altitude; it is preserved and ignored for matching.
@@ -105,22 +122,26 @@ country coverage regions are excluded from the planned physical-area model.
 - Latitude must be in [-90, 90], longitude in [-180, 180]. Longitudes are not
   automatically normalized. Any invalid sample rejects the entire batch.
   Empty batches must have an explicit `(0, 2)` or `(0, 3)` array shape.
-- `k` is a positive integer, capped at the eligible record count. Feature filters
+- `k` is a positive integer, capped at the eligible unique-feature count. Feature filters
   restrict candidates before nearest-neighbor selection. Empty or unmatched filters return no selected
   neighbors; class-specific results remain available independently of the filter.
 - Types: `city`, `town`, `remote_settlement`, `landmark`, `mountain`, `lake`,
-  `island`, `other`. Settlement means the first three; landmark means exactly
+  `island`, `other`, `ocean`, `sea`, `desert`, `mountain_range`, `physical_region`.
+  Settlement means the first three; landmark means exactly
   `landmark`, with natural features requested through their own types.
 - Distances use a sphere of radius **6371.0088 km**, not an ellipsoidal geodesic.
   Bearings point from query to reference, clockwise from north. Undefined
   bearings at coincident/antipodal points or an exact query pole are `None`.
   Equal-distance neighbor ordering is unspecified.
-- `nearby_reference` means within 25 km; otherwise `distant_reference`.
+- `estimated_coverage` means inside a fuzzy circle. `nearby_reference` means
+  within 25 km of its estimated coverage; otherwise `distant_reference`.
   This is a proximity label, not a geographic accuracy guarantee. No matching
   references produces `no_reference`. Ocean/country membership is not inferred.
 - The default dataset loads once; unit-sphere vectors and feature subsets are
   cached. NumPy scans all eligible references using squared chord distance;
-  nearest-*k* results use partial selection. Batch scans use bounded chunks and
+  zero-radius, unique-point nearest-*k* results use partial selection; radius/group
+  queries use a full sort for straightforward tie-breaking and deduplication.
+  Batch scans use bounded chunks and
   dictionary formatting runs per sample. This favors simple deployment and device
   update rates below 10 Hz. See [the timing notes](docs/performance.md) for measured
   desktop results and a reproducible 10,000-reference benchmark.

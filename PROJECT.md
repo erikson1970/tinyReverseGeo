@@ -93,6 +93,7 @@ Each geographic point should contain:
 - administrative region/state/province where available, attached only to settlements
 - optional population or significance score
 - source ID (e.g., GeoNames ID) for reproducibility and traceability
+- optional `radius_km` (default zero), stable logical `feature_id`, and `radius_method`
 
 Altitude is accepted in position inputs but **ignored for geographic nearest-neighbor matching** in v1; report this clearly. Do not accidentally treat altitude as longitude or vice versa.
 
@@ -108,12 +109,15 @@ representing countries. In particular, there should be no **"Iceland Region"**: 
 comes from the country metadata on nearby settlements. Area coverage is intended
 for physical features such as oceans, seas, deserts, and mountain ranges.
 
-The proposed next representation adds optional `radius_km` (zero for a point)
+The implemented representation adds optional `radius_km` (zero for a point)
 and a shared `feature_id` for multiple coverage circles describing one physical
 feature. Rank approximate area proximity using `max(0, center_distance - radius)`,
 group results by feature ID, and retain both regional context and nearby settlement
 references. Circle membership describes the modeled coverage, not administrative
-containment. This circle representation remains planned work.
+containment. Overlaps are accepted. Settlement density-based radii are configurable
+heuristics; Natural Earth physical-area samples provide overlapping circles with
+shared feature IDs. See [docs/decisions.md](docs/decisions.md) for defaults and
+alternatives. Dataset schema 2 adds these fields; runtime also reads schema 1.
 
 ### Sources and licensing
 
@@ -187,7 +191,8 @@ approximation, not an ellipsoidal geodesic.
 
 Support feature filters (e.g. settlement-only, landmark-only, or any) and nearest-*k*
 results. Filter the candidate set before selecting neighbors; cache feature subsets.
-Use NumPy minimum/partial selection and sort only selected neighbors. Do not
+Use NumPy minimum/partial selection for unique zero-radius points and a full sort
+for circle/group queries, ordering by area distance then center distance. Do not
 retrieve an insufficient fixed number of unfiltered neighbors and filter afterward.
 
 Potential public API (refine if needed):

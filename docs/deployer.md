@@ -225,3 +225,64 @@ device release test matrix have not been recorded.
 A separate real `AQ` country-extract build exercised natural features: 250 selected
 points included 217 mountains, 2 islands, 4 other features, and 27 small settlements.
 Curated geopy behavior is covered by mocked/cache tests, without a live account.
+
+## Fuzzy circles and Natural Earth physical features
+
+```sh
+.venv/bin/python tools/deploy.py --natural-earth --points 10000 --target pythonista \
+  --output dist/tinygeo-physical-pythonista-external-10000
+```
+
+`--natural-earth` fetches and pins three small public-domain 10m datasets from
+Natural Earth's physical labels collection: land regions, marine areas, and
+elevation points. Its polygons are sampled on a 5° grid plus an interior anchor.
+Circles overlap and provide approximate nearby context. Island/continent/geoarea
+label polygons are excluded so country-like regions such as Iceland are not
+introduced. Mountain points use a declared 5 km radius assumption.
+
+By default up to 35% of stored rows are reserved for these physical sources.
+`--physical-fraction` and `--physical-spacing` (1–15°) are adjustable. `--points`
+still specifies the exact number of stored records; `feature_count` reports the
+number of logical features after grouping repeated support circles. Selection can
+thin a region's samples, so the circles do not guarantee complete area coverage.
+Natural Earth boundaries are cartographic approximations, not authoritative areas.
+
+New builds estimate settlement radii as `sqrt(population / (pi * density))`, clamped
+to 0.5–40 km; unknown population gets 1 km. The default **1,000 people/km² is an
+assumption**, not measured urban density. `--radius-min`, `--radius-max`, and
+`--radius-fallback` configure the limits. `--point-radii` makes settlement radii zero.
+Regional assumptions can be supplied with `--density-config densities.json`:
+
+```json
+{
+  "default": 1000,
+  "countries": {"XX": 1500},
+  "regions": {"XX/Example Region": 2500},
+  "source_note": "Illustrative assumptions; replace with calibrated values"
+}
+```
+
+Keys use source country codes and administrative region **display names** before
+export. Overrides prefer region, then country, then default. All assumptions are
+stored in selection metadata. Source country/admin labels are still exported only
+on settlements. No GHSL raster processing or extra runtime dependency is required.
+
+Runtime schema 2 adds `radius_km`, `feature_id`, and `radius_method`, and remains
+able to read old schema-1 point files. Area ranking uses `max(0, center-radius)`
+with center distance as tie-breaker. Repeated circles for one feature produce one
+neighbor. Results keep `distance_km` as center distance and expose
+`distance_to_area_km`, `within_radius`, `nearest_region`, and `nearby_regions`.
+Use `distance_mode="center"` to ignore radii for ranking.
+
+Each new deployment includes `benchmark_deployed.py`, a plain-Python timing script
+that benchmarks the bundled real dataset on desktop or Pythonista without IPython
+magics. The [decision log](decisions.md) records accuracy and simplicity choices.
+
+Initial fuzzy checkpoint: 10,000 stored circles represent 7,683 logical features,
+including 3,790 cities, 2,678 towns, 32 remote settlements, 459 mountain references,
+126 desert circles, 300 mountain-range circles, 1,345 ocean circles, 567 sea circles,
+4 lake circles, and 699 other physical-region circles. The gzip database is 328,076
+bytes. Both external and embedded layouts were exercised under Python 3.10 with
+only NumPy, with network and build-module imports disabled. A locked external
+rebuild matched byte for byte. Sizes and IDs describe this initial checkpoint and
+will evolve with later builds; manifests are authoritative for a particular artifact.

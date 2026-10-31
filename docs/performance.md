@@ -49,3 +49,28 @@ later, revisit that requirement with device data.
 SciPy remains an optional **builder-only** dependency for coverage-aware
 database selection, spacing checks, and deduplication. Deployed lookup code and
 the exported point database do not depend on SciPy.
+
+## Fuzzy mixed-feature checkpoint
+
+The new radius/group path deliberately sorts all eligible records so overlap ties
+and duplicate support circles have straightforward semantics. For mixed dataset
+`tinygeo-1538bc4fb376b94dfc23` (10,000 rows / 7,683 logical features), desktop
+Python 3.10.16 / NumPy 1.21.6 measured:
+
+| Measurement | Observed |
+|---|---:|
+| Load and first lookup | 82.91 ms |
+| Warm single median | 3.616 ms |
+| Warm single p95 | 3.907 ms |
+| Batch of 1,000 | 3.505 s |
+
+This is slower than the zero-radius point path and remains suitable for the
+intended desktop cadence below 10 Hz. It is not a phone measurement. The user
+previously reported rapid iPhone execution with the earlier point build; benchmark
+the new fuzzy build using its included `benchmark_deployed.py` to assess that
+device separately. Reproduce on desktop with:
+
+```sh
+.venv/bin/python tools/benchmark_lookup.py \
+  --dataset dist/tinygeo-physical-pythonista-external-10000/dataset.json.gz
+```

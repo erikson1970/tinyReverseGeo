@@ -8,6 +8,7 @@ import gzip
 from hashlib import sha256
 import io
 import json
+import math
 from pathlib import Path
 import platform
 import sys
@@ -22,6 +23,7 @@ from tools.geodb import (ALGORITHM, ATTRIBUTION, BASE_URL, LICENSE_URL, Candidat
                         local_source, select_candidates)
 from tinygeo import Gazetteer
 from tinygeo.lookup import SETTLEMENTS
+from tools.radii import density_config, estimate_radius
 
 PROFILES = {"pythonista": {"python_min": "3.10", "scan_pairs": 65_536},
             "python": {"python_min": "3.10", "scan_pairs": 262_144}}
@@ -60,7 +62,8 @@ def package_payload(data_gz, layout, profile):
                     if not isinstance(n, ast.ImportFrom) or n.level != 1 or n.module != "data"]
     encoded = base64.b64encode(data_gz).decode("ascii")
     chunks = "\n".join(repr(encoded[i:i + 100]) for i in range(0, len(encoded), 100))
-    header = (f'"""TinyGeo single-file runtime. {ATTRIBUTION} License: {LICENSE_URL}"""\n'
+    data_attribution = json.loads(gzip.decompress(data_gz))["attribution"]
+    header = (f'"""TinyGeo single-file runtime. {data_attribution} License: {LICENSE_URL}"""\n'
               f"import base64\n_EMBEDDED_DATA = (\n{chunks}\n)\n")
     public_api = ast.parse((ROOT / "src/tinygeo/__init__.py").read_text(encoding="utf-8"))
     exports = next(n for n in public_api.body if isinstance(n, ast.Assign)
@@ -96,6 +99,7 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
                        "dataset_gzip_bytes": len(compressed), "runtime_payload_bytes": runtime_bytes,
                        "gzip_target_bytes": 1_000_000, "gzip_target_met": len(compressed) <= 1_000_000}
     payload["smoke_test.py"] = SMOKE.encode("utf-8")
+    payload["benchmark_deployed.py"] = (ROOT / "tools/benchmark_lookup.py").read_bytes()
     instructions = (f"TinyGeo deployment: {target}, {layout}, {dataset['record_count']} references.\n\n"
                     "Requires Python >=3.10 and NumPy >=1.21.6; no SciPy/geopy or network at runtime.\n"
                     "Extract this ZIP into an application/script folder, preserving all paths.\n"
@@ -106,16 +110,17 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
                     "Nearby references are approximate context; their country/region is not query containment.\n"
                     "The source set and feature coverage are described in build-report.json.\n"
                     "Physical Pythonista validation and the tracking UI remain separate work.\n\n"
-                    + ATTRIBUTION + "\n" + LICENSE_URL + "\n")
+                    + dataset["attribution"] + "\n" + LICENSE_URL + "\n")
     payload["README.txt"] = instructions.encode("utf-8")
     payload["LICENSE"] = (ROOT / "LICENSE").read_bytes()
-    payload["DATA-LICENSE.txt"] = (ATTRIBUTION + "\n" + LICENSE_URL + "\n"
+    payload["DATA-LICENSE.txt"] = (dataset["attribution"] + "\n" + LICENSE_URL + "\n"
                                   + BASE_URL + "readme.txt\n").encode("utf-8")
     payload["source-lock.json"] = canonical_json(lock)
     payload["build-report.json"] = canonical_json(report)
     manifest = {"format_version": 1, "target": target, "layout": layout,
                 "profile": profile, "runtime_dependencies": ["numpy>=1.21.6"],
                 "dataset_id": dataset["dataset_id"], "record_count": dataset["record_count"],
+                "feature_count": dataset.get("feature_count", dataset["record_count"]),
                 "dataset_sha256": sha256(compressed).hexdigest(),
                 "files_sha256": {name: sha256(content).hexdigest() for name, content in sorted(payload.items())}}
     payload["manifest.json"] = canonical_json(manifest)
@@ -144,6 +149,11 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
 def deploy(args):
     if args.points < 1:
         raise ValueError("--points must be a positive integer")
+    density = density_config(args.density_config)
+    if not (all(math.isfinite(v) for v in (args.radius_min, args.radius_max, args.radius_fallback, args.physical_fraction))
+            and 0 <= args.radius_min <= args.radius_max <= 20000
+            and 0 <= args.radius_fallback <= args.radius_max and 0 <= args.physical_fraction <= 1):
+        raise ValueError("invalid radius bounds/fallback or physical fraction")
     if args.refresh and (args.offline or args.lock):
         raise ValueError("--refresh cannot be combined with --offline or --lock")
     lock = json.loads(args.lock.read_text(encoding="utf-8")) if args.lock else None
@@ -153,6 +163,9 @@ def deploy(args):
         raise ValueError("unsupported source-lock format")
     if lock and bool(lock.get("curated_sources")) != bool(args.places):
         raise ValueError("pass the same --places file used by the source lock")
+    if lock and args.natural_earth and not lock.get("physical_sources"):
+        raise ValueError("the source lock has no Natural Earth inputs; build without --lock to add them")
+    use_physical = args.natural_earth or bool(lock and lock.get("physical_sources"))
     try:
         from scipy.spatial import cKDTree
     except ImportError as exc:
@@ -212,9 +225,22 @@ def deploy(args):
         by_id = {c.source_id: c for c in candidates}
         by_id.update({c.source_id: c for c in curated})
         candidates = sorted(by_id.values(), key=lambda c: c.source_id)
-    selected = select_candidates(candidates, args.points, pinned=[c.source_id for c in curated])
-    records = [{**c.record, "lat": round(c.record["lat"], args.coordinate_decimals),
-                "lon": round(c.record["lon"], args.coordinate_decimals)} for c in selected]
+    physical_sources, physical_report, physical_selected = [], {}, []
+    if use_physical:
+        from tools.natural_earth import load_candidates
+        physical, physical_sources, physical_report = load_candidates(
+            args.cache.parent / "natural_earth", offline=args.offline, refresh=args.refresh,
+            locked=lock.get("physical_sources", ()) if lock else (), spacing=args.physical_spacing)
+        budget = min(len(physical), int(args.points * args.physical_fraction), args.points-len({c.source_id for c in curated}))
+        if budget > 0:
+            physical_selected = select_candidates(physical, budget)
+        candidates += physical_selected
+    pins = [c.source_id for c in curated + physical_selected]
+    selected = select_candidates(candidates, args.points, pinned=pins)
+    records = [estimate_radius({**c.record, "lat": round(c.record["lat"], args.coordinate_decimals),
+                "lon": round(c.record["lon"], args.coordinate_decimals)}, density,
+                minimum=args.radius_min, maximum=args.radius_max, fallback=args.radius_fallback,
+                point_radii=args.point_radii) for c in selected]
     for record in records:
         if record["feature_type"] not in SETTLEMENTS:
             record["country_code"] = None
@@ -226,16 +252,27 @@ def deploy(args):
                  "coordinate_decimals": args.coordinate_decimals, "salience_seed_fraction": .2,
                  "group_targets": {"settlement": .7, "natural": .2, "landmark": .1},
                  "coverage_advantage_cap_km": 1000,
-                 "administrative_metadata": "settlements_only"}
+                 "administrative_metadata": "settlements_only",
+                 "settlement_radii": {"density": density, "minimum_km": args.radius_min,
+                    "maximum_km": args.radius_max, "fallback_km": args.radius_fallback, "point_only": args.point_radii},
+                 "physical": {"enabled": use_physical, "fraction": args.physical_fraction, "spacing_degrees": args.physical_spacing}}
     identity = sha256(canonical_json({"records": records, "selection": selection})).hexdigest()
-    dataset = {"schema_version": 1, "dataset_id": "geonames-" + identity[:20],
+    feature_count = len({r.get("feature_id") or r["source_id"] for r in records})
+    attribution = ATTRIBUTION
+    if use_physical:
+        from tools.natural_earth import ATTRIBUTION as physical_attribution
+        attribution += " " + physical_attribution
+    dataset = {"schema_version": 2, "dataset_id": "tinygeo-" + identity[:20],
                "kind": "geographic", "record_count": len(records), "records": records,
-               "selection": selection, "sources": snapshots + curated_sources,
-               "attribution": ATTRIBUTION, "license": "CC-BY-4.0", "license_url": LICENSE_URL}
-    new_lock = {"format_version": 1, "sources": snapshots, "curated_sources": curated_sources}
+               "feature_count": feature_count, "selection": selection,
+               "sources": snapshots + curated_sources + physical_sources,
+               "attribution": attribution, "license": "CC-BY-4.0", "license_url": LICENSE_URL}
+    new_lock = {"format_version": 1, "sources": snapshots, "curated_sources": curated_sources,
+                "physical_sources": physical_sources}
     from importlib.metadata import version
     report = {"dataset_id": dataset["dataset_id"], "record_count": len(records),
-              "selection": selection, "ingestion": ingest,
+              "feature_count": feature_count, "selection": selection, "ingestion": ingest,
+              "physical_ingestion": physical_report,
               "pinned_places": len({c.source_id for c in curated}),
               "feature_counts": dict(sorted(Counter(r["feature_type"] for r in records).items())),
               "country_counts": dict(sorted(Counter(
@@ -247,7 +284,10 @@ def deploy(args):
                                  "Candidate feature availability limits requested group allocations."],
               "builder_versions": {"python": platform.python_version(), "numpy": version("numpy"), "scipy": version("scipy")},
               "builder_source_sha256": {name: sha256((ROOT / name).read_bytes()).hexdigest()
-                                         for name in ("tools/geodb.py", "tools/deploy.py", "tools/geopy_places.py")}}
+                                         for name in ("tools/geodb.py", "tools/deploy.py", "tools/geopy_places.py", "tools/radii.py", "tools/natural_earth.py")}}
+    if use_physical:
+        report["builder_versions"].update({"shapely": version("shapely"), "pyshp": version("pyshp")})
+    report["coverage_notes"].append("Coverage-distance diagnostics measure reference centers, not fuzzy circle membership.")
     if not any(r["feature_type"] not in {"city", "town", "remote_settlement"} for r in records):
         report["coverage_notes"].append("Settlement-only build: choose country/allCountries sources for natural and cultural features.")
     output = args.output or ROOT / f"dist/tinygeo-{args.target}-{args.layout}-{args.points}"
@@ -269,6 +309,14 @@ def main(argv=None):
     parser.add_argument("--input", type=Path, nargs="+", help="local GeoNames text/ZIP snapshots")
     parser.add_argument("--admin1", type=Path, help="local admin1CodesASCII.txt, with --input")
     parser.add_argument("--places", type=Path, help="small curated GeoNames query list resolved through geopy")
+    parser.add_argument("--natural-earth", action="store_true", help="add Natural Earth physical references and coverage circles")
+    parser.add_argument("--physical-fraction", type=float, default=.35, help="maximum fraction of rows reserved for physical sources")
+    parser.add_argument("--physical-spacing", type=float, default=5.0, help="physical polygon sample spacing, degrees (1–15)")
+    parser.add_argument("--density-config", type=Path, help="JSON urban-density assumptions with country/region overrides")
+    parser.add_argument("--radius-min", type=float, default=.5)
+    parser.add_argument("--radius-max", type=float, default=40.0)
+    parser.add_argument("--radius-fallback", type=float, default=1.0)
+    parser.add_argument("--point-radii", action="store_true", help="zero settlement radii for point-only comparisons")
     parser.add_argument("--cache", type=Path, default=ROOT / "data_sources/geonames")
     parser.add_argument("--lock", type=Path, help="source-lock.json from an earlier build")
     parser.add_argument("--offline", action="store_true")

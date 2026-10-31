@@ -36,5 +36,15 @@ layers, cached under ignored `data_sources/cartopy/`. Natural Earth declares the
 map data [public domain](https://www.naturalearthdata.com/about/terms-of-use/).
 They are plotting assets, separate from the GeoNames reference database.
 
+Optional `--natural-earth` deployments additionally use Natural Earth's
+`ne_10m_geography_regions_polys`, `ne_10m_geography_marine_polys`, and
+`ne_10m_geography_regions_elevation_points` from the
+[physical labels collection](https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-physical-labels/).
+These public-domain source snapshots are checksummed and attributed in the build
+manifest. The builder samples physical areas into fuzzy circles and selects
+elevation points; it does not export their source country/admin labels. Density
+radius values are declared heuristics and must not be represented as measured
+settlement boundaries.
+
 The project's source code is licensed under Apache License 2.0; see [LICENSE](LICENSE).
 External geographic data will retain its own source-specific license and attribution.
