@@ -23,6 +23,21 @@ python examples/demo.py
 Installing dependencies needs network access or locally available wheels. Runtime
 queries use only local package resources, NumPy, SciPy, and the standard library.
 
+## Playground notebook
+
+Open [notebooks/playground.ipynb](notebooks/playground.ipynb) in VS Code or Jupyter.
+Install its optional dependencies in the project environment:
+
+```sh
+.venv/bin/python -m pip install -e '.[notebook]'
+```
+
+In VS Code, select `.venv/bin/python` as the notebook kernel, then **Run All**.
+The notebook includes editable coordinates, a reference-point plot, batch queries,
+feature filters, a custom gazetteer, numerical checks, and a small timing experiment.
+It uses synthetic data and does not download anything when run. For a standalone
+Jupyter interface, install JupyterLab separately and open the same notebook.
+
 ## Lookup API
 
 ```python
