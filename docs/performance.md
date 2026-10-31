@@ -46,6 +46,6 @@ with sample count and requested neighbors. This is O(M) work per query; very lar
 offline batches will be slower than a tree. If measured use requires more speed
 later, revisit that requirement with device data.
 
-SciPy remains an optional **builder-only** dependency for future coverage-aware
+SciPy remains an optional **builder-only** dependency for coverage-aware
 database selection, spacing checks, and deduplication. Deployed lookup code and
 the exported point database do not depend on SciPy.

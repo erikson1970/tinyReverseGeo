@@ -24,6 +24,10 @@ require them.
 5. A compact distribution: **target ≤ 1 MB compressed data** for roughly 10,000 reference locations, with actual size reported by the build process. This is a target rather than a hard constraint; do not sacrifice needed geographic coverage merely to meet it.
 6. Evaluation scripts and tests measure geographic usefulness, numerical correctness, speed, and comparisons to `reverse_geocoder`.
 7. Future release: a Pythonista/iOS companion uses this library and the device's reported location for current context, a history of nearby/passed references, and velocity-based projections at 15 minutes, 1 hour, and 2 hours. See the release TODO below; this is outside the first desktop milestone.
+8. A desktop deployer builds for a processing target (`pythonista` or general
+   `python`), accepting the requested reference count and embedded/external data
+   layout. It fetches and pins source snapshots, selects/optimizes the database,
+   and emits an offline runtime, source lock, attribution, and coverage/size report.
 
 ## Repository layout (suggested)
 
@@ -49,6 +53,32 @@ tinygeo/
 ```
 
 The initial implementation may be smaller; avoid unnecessary infrastructure.
+
+## Deployment utility
+
+The implemented entry point is `tools/deploy.py`; see [docs/deployer.md](docs/deployer.md).
+For example:
+
+```sh
+python -m pip install -e '.[builder]'
+python tools/deploy.py --target pythonista --points 10000 --layout embedded
+```
+
+The initial deployer supports cached GeoNames city/country/worldwide exports,
+deterministic spatial-stratified selection with salience seeds, gzip JSON resources,
+and single-file gzip/Base64 builds generated from the same runtime source. Target
+profiles set batch memory budgets. SciPy helps selection/coverage only at build
+time; optional geopy resolves small curated GeoNames query lists with response
+caching. NumPy remains the only external deployed dependency. geopy is a client
+for providers, so each added provider needs explicit data provenance/licensing.
+
+Output includes `tinygeo.zip`, `dataset.json.gz`, `manifest.json`, `source-lock.json`,
+and `build-report.json`; embedded builds also expose `tinygeo.py` directly. Rebuilds
+can pin sources with `--lock ... --offline`. Defaults use `cities500` and therefore
+provide settlement coverage; use broader extracts for natural/cultural features.
+The development package's synthetic fixture stays separate from real deployment
+data until a release dataset is selected. Selection-quality evaluation and physical
+Pythonista validation remain required before declaring v1 complete.
 
 ## Database design
 
@@ -240,6 +270,8 @@ Use **one shared database and a NumPy lookup backend** across desktop and iOS:
 - [ ] Produce a downloadable ZIP containing the importable library, compressed
   data, launcher script, attribution, version/checksum manifest, and copy/run
   instructions. Require no package installation, downloads, or network at runtime.
+  The deployer now produces real lookup-only bundles in both layouts; the device
+  tracking launcher/UI and release verification remain pending.
 
 ### Device tracking and presentation
 

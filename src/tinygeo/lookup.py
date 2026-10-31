@@ -2,11 +2,11 @@
 
 from dataclasses import asdict, dataclass
 from functools import lru_cache
-from importlib.resources import files
-import json
 from numbers import Integral
 
 import numpy as np
+
+from .data import load_dataset, load_default_dataset
 
 EARTH_RADIUS_KM = 6371.0088
 FEATURE_TYPES = frozenset({
@@ -29,6 +29,7 @@ class Reference:
     feature_type: str
     country_code: str | None = None
     region: str | None = None
+    population: int | None = None
 
 
 def _positions(positions):
@@ -77,7 +78,7 @@ class Gazetteer:
     neighbor ordering is unspecified. No lookup establishes area containment.
     """
 
-    def __init__(self, records, *, dataset_id="custom", synthetic=False):
+    def __init__(self, records, *, dataset_id="custom", synthetic=False, metadata=None):
         self.records = tuple(records)
         if not self.records:
             raise ValueError("a gazetteer must contain at least one reference")
@@ -92,6 +93,20 @@ class Gazetteer:
         self._subsets = {FEATURE_TYPES: (np.arange(len(self.records)), self._vectors)}
         self.dataset_id = dataset_id
         self.synthetic = synthetic
+        self.metadata = dict(metadata or {})
+
+    @classmethod
+    def _from_data(cls, data):
+        metadata = {k: v for k, v in data.items() if k != "records"}
+        metadata["record_count"] = len(data["records"])
+        return cls((Reference(**r) for r in data["records"]),
+                   dataset_id=data["dataset_id"], synthetic=data["kind"] == "synthetic",
+                   metadata=metadata)
+
+    @classmethod
+    def from_file(cls, path):
+        """Load an external JSON/gzip gazetteer produced by the deployer."""
+        return cls._from_data(load_dataset(path))
 
     def _subset(self, types):
         key = frozenset(types)
@@ -191,16 +206,20 @@ class Gazetteer:
 
 @lru_cache(maxsize=1)
 def _default_gazetteer():
-    data = json.loads(files("tinygeo").joinpath("resources/demo.json").read_text(encoding="utf-8"))
-    return Gazetteer((Reference(**r) for r in data["records"]),
-                     dataset_id=data["dataset_id"], synthetic=data["kind"] == "synthetic")
+    return Gazetteer._from_data(load_default_dataset())
+
+
+def dataset_info():
+    """Return metadata for the bundled database, without the reference records."""
+    from copy import deepcopy
+    return deepcopy(_default_gazetteer().metadata)
 
 
 def locate(lat, lon, *, altitude=None, k=1, feature_types=None):
-    """Locate with the cached bundled dataset (currently a synthetic demo)."""
+    """Locate with the cached bundled dataset; inspect dataset_info for provenance."""
     return _default_gazetteer().locate(lat, lon, altitude=altitude, k=k, feature_types=feature_types)
 
 
 def locate_many(positions, *, k=1, feature_types=None):
-    """Batch locate with the cached bundled dataset (currently synthetic)."""
+    """Batch locate with the cached bundled dataset."""
     return _default_gazetteer().locate_many(positions, k=k, feature_types=feature_types)

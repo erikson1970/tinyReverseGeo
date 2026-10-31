@@ -1,5 +1,9 @@
 # Pythonista setup and smoke test
 
+For real GeoNames application builds with configurable point count and embedded
+or external data, use the [deployer guide](deployer.md). The instructions below
+refer to the original six-point synthetic demo bundle.
+
 The shared lookup runtime targets **Python 3.10+ with NumPy >=1.21.6**. SciPy is
 used only by optional desktop database-building tools; it is not needed on iOS.
 Pythonista's official [platform page](https://omz-software.com/pythonista/) documents
@@ -54,6 +58,6 @@ and poles. It scans all eligible records for each query; batches use bounded
 chunks. This keeps deployment small and simple for approximately 10,000 references
 and device updates below 10 Hz. On-device timing remains to be measured.
 
-SciPy's `cKDTree` is still available through the desktop `builder` extra for future
+SciPy's `cKDTree` is available through the desktop `builder` extra for
 coverage-aware record selection; the exported database contains portable records,
 not a serialized tree.
