@@ -17,6 +17,15 @@ the full device benchmark and release test matrix remain pending. The bundled
 six-point database is synthetic. Use the real-data deployer for useful coverage
 and the new foreground companion prototype described in [tracking.md](tracking.md).
 
+Later on 2026-10-31, the user supplied a complete `PASS` output for the current
+real-data smoke test on Pythonista: dataset `tinygeo-c5f36386a63bde416304`, 10,000
+records. The printed runtime path identified the newly extracted bundle, confirming
+recovery from the older nested-package import. Fuzzy lookup, batch/polar/dateline
+checks, basic track summaries, and stationary projections completed successfully.
+The smoke test does not request location access. Live UI/GPS behavior, exact
+Pythonista/Python/NumPy versions, and device timing/battery measurements remain
+unverified.
+
 ## Make a portable bundle on desktop
 
 From the repository root:

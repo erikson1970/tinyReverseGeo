@@ -198,5 +198,8 @@ ordinary applications remain unchanged; this reset belongs to standalone launche
 
 Regression tests cover namespace nesting, another old package already in memory,
 and stale code cached at the same path, for all three launchers and both layouts.
-Desktop tests cannot verify every iOS filesystem/interpreter behavior; a device
-retry remains necessary.
+On 2026-10-31 the user reported the rebuilt smoke test passing on Pythonista with
+the expected dataset `tinygeo-c5f36386a63bde416304` and 10,000 records. Its runtime
+path identified the new extraction folder. This confirms the launcher recovery
+for the reported device case; the live UI/GPS and other iOS behavior still need
+field testing.

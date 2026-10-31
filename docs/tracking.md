@@ -3,7 +3,12 @@
 The shared NumPy-only runtime now supports desktop replay and a foreground
 Pythonista companion prototype. Its acquisition/controller is tested with a
 simulated provider. **The new iOS UI has not been exercised on a physical device.**
-The earlier successful iPhone test covered the point-lookup library, not this app.
+On 2026-10-31 the user reported a successful Pythonista smoke test of the real
+10,000-record dataset `tinygeo-c5f36386a63bde416304`, after the launcher import fix.
+That test covered package/data loading, fuzzy lookup, batch/polar/dateline cases,
+and basic track-summary/stationary-forecast assertions. Live location acquisition,
+the foreground UI, and measured device performance remain to be checked. The
+printed Boston result uses the smoke test's fixed coordinates, not a device fix.
 
 ## Pythonista quick start
 
