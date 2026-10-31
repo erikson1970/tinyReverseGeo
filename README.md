@@ -48,7 +48,8 @@ Pythonista copy/run instructions, and reproducibility details.
 
 For the original synthetic Pythonista smoke test, see
 [docs/pythonista.md](docs/pythonista.md). Pythonista's official documentation lists
-Python 3.10 and bundled NumPy; actual device verification is still pending.
+Python 3.10 and bundled NumPy. Basic lookups were confirmed by the user on an
+iPhone running Pythonista on 2026-10-31; measured device benchmarks remain pending.
 
 ## Playground notebook
 

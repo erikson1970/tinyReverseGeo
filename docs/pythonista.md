@@ -10,7 +10,10 @@ Pythonista's official [platform page](https://omz-software.com/pythonista/) docu
 Python 3.10 and bundled NumPy. Confirm the versions printed on your device.
 
 The runtime is tested on desktop Python 3.10 with NumPy 1.21.6 and Python 3.13
-with NumPy 2.5.4. **Physical Pythonista/iOS verification is pending.** The bundled
+with NumPy 2.5.4. On **2026-10-31**, the user confirmed basic lookup execution on an
+iPhone running Pythonista and described it as seemingly instantaneous without
+`%timeit`. Exact device/software versions and measured timings were not supplied;
+the full device benchmark and release test matrix remain pending. The bundled
 six-point database is synthetic; this package does not yet provide useful real-world
 coverage or the device-tracking application planned in PROJECT.md.
 

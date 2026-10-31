@@ -207,9 +207,13 @@ settlements. Dataset ID: `geonames-f508da16eb0e0c1e7292`.
 The external ZIP rebuilt byte for byte from its source lock. Both layouts ran
 their offline smoke tests on desktop Python 3.10 / NumPy 1.21.6 with network
 creation blocked and neither SciPy nor geopy installed. The embedded module also
-ran after copying only `tinygeo.py` to a separate folder. Physical iOS execution
-has not been verified. These sizes will change with source snapshots, counts,
-configuration, or code.
+ran after copying only `tinygeo.py` to a separate folder. These sizes will change
+with source snapshots, counts, configuration, or code.
+
+On **2026-10-31**, the user reported that lookup code also ran on their iPhone in
+Pythonista, appearing instantaneous after removing `%timeit`. This confirms basic
+device execution. Exact device/software versions, measured latency, and a complete
+device release test matrix have not been recorded.
 
 A separate real `AQ` country-extract build exercised natural features: 250 selected
 points included 217 mountains, 2 islands, 4 other features, and 27 small settlements.

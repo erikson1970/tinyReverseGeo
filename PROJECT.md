@@ -264,6 +264,9 @@ Use **one shared database and a NumPy lookup backend** across desktop and iOS:
   cached unit-sphere vectors and filtered subsets, with bounded batch chunks.
 - [x] Target Python 3.10 and retain matching semantics, validation, distances,
   bearings, and qualified descriptions in the shared library.
+- [x] User-reported basic lookup execution on an actual iPhone/Pythonista
+  (2026-10-31). The user described responses as seemingly instantaneous after
+  removing the IPython `%timeit` statement; no measured device timing was supplied.
 - [ ] Run the supplied smoke test and benchmark approximately 10,000 references
   on a physical Pythonista device. A standard-library-only fallback remains
   optional if a future target cannot import NumPy.
