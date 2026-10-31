@@ -24,6 +24,7 @@ from tools.geodb import (ALGORITHM, ATTRIBUTION, BASE_URL, LICENSE_URL, Candidat
 from tinygeo import Gazetteer
 from tinygeo.lookup import SETTLEMENTS
 from tools.radii import density_config, estimate_radius
+from tools.launcher import wrap_launcher
 
 PROFILES = {"pythonista": {"python_min": "3.10", "scan_pairs": 65_536},
             "python": {"python_min": "3.10", "scan_pairs": 262_144}}
@@ -82,6 +83,8 @@ def package_payload(data_gz, layout, profile):
 
 SMOKE = '''"""Offline smoke test for a generated TinyGeo build."""
 import json
+import tinygeo
+print("TinyGeo runtime:", tinygeo.__file__)
 from tinygeo import dataset_info, locate, locate_many, describe_track, estimate_motion, project_motion
 
 info = dataset_info()
@@ -110,9 +113,9 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
     report["sizes"] = {"dataset_json_bytes": len(canonical_json(dataset)),
                        "dataset_gzip_bytes": len(compressed), "runtime_payload_bytes": runtime_bytes,
                        "gzip_target_bytes": 1_000_000, "gzip_target_met": len(compressed) <= 1_000_000}
-    payload["smoke_test.py"] = SMOKE.encode("utf-8")
-    payload["benchmark_deployed.py"] = (ROOT / "tools/benchmark_lookup.py").read_bytes()
-    payload["pythonista_track.py"] = (ROOT / "examples/pythonista_track.py").read_bytes()
+    payload["smoke_test.py"] = wrap_launcher(SMOKE)
+    payload["benchmark_deployed.py"] = wrap_launcher((ROOT / "tools/benchmark_lookup.py").read_bytes())
+    payload["pythonista_track.py"] = wrap_launcher((ROOT / "examples/pythonista_track.py").read_bytes())
     payload["TRACKING.md"] = (ROOT / "docs/tracking.md").read_bytes()
     instructions = (f"TinyGeo deployment: {target}, {layout}, {dataset['record_count']} references.\n\n"
                     "Requires Python >=3.10 and NumPy >=1.21.6; no SciPy/geopy or network at runtime.\n"
@@ -302,7 +305,7 @@ def deploy(args):
                                  "Candidate feature availability limits requested group allocations."],
               "builder_versions": {"python": platform.python_version(), "numpy": version("numpy"), "scipy": version("scipy")},
               "builder_source_sha256": {name: sha256((ROOT / name).read_bytes()).hexdigest()
-                                         for name in ("tools/geodb.py", "tools/deploy.py", "tools/geopy_places.py", "tools/radii.py", "tools/natural_earth.py")}}
+                                         for name in ("tools/geodb.py", "tools/deploy.py", "tools/geopy_places.py", "tools/radii.py", "tools/natural_earth.py", "tools/launcher.py")}}
     if use_physical:
         report["builder_versions"].update({"shapely": version("shapely"), "pyshp": version("pyshp")})
     report["coverage_notes"].append("Coverage-distance diagnostics measure reference centers, not fuzzy circle membership.")

@@ -180,3 +180,23 @@ Keep the current phone trial on a fixed artifact while these changes are designe
 The recommended trial bundle is `tinygeo-staggered-pythonista-external-10000`,
 dataset `tinygeo-c5f36386a63bde416304`. This entry records the next optimization
 work; it does not claim that land merging or adaptive refinement is implemented.
+
+## D011 — Launchers select their adjacent runtime explicitly
+
+The phone traceback ran a smoke script under `TinyGeo2` while importing an old
+nested `tinygeo.tinygeo` package under `TinyGeo`. The outer import was a namespace
+package, and the older inner package lacked the newer tracking exports. An added
+dot in the import selected that older API rather than repairing bundle selection.
+
+Generated smoke, tracking, and benchmark launchers now prepend their own folder,
+clear cached `tinygeo` modules, invalidate import caches, and verify the loaded
+module's file against the adjacent package/module. Both external and embedded
+layouts use this bootstrap. A missing local runtime fails with an explicit layout
+message; it cannot silently fall back to another installed release. The smoke test
+prints the selected path before checking public API imports. Library imports in
+ordinary applications remain unchanged; this reset belongs to standalone launchers.
+
+Regression tests cover namespace nesting, another old package already in memory,
+and stale code cached at the same path, for all three launchers and both layouts.
+Desktop tests cannot verify every iOS filesystem/interpreter behavior; a device
+retry remains necessary.

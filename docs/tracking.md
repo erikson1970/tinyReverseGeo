@@ -16,6 +16,19 @@ small regional experiments remain in `dist/` as checkpoints.
 Extract the **whole ZIP**, keeping `tinygeo/` beside `smoke_test.py` and
 `pythonista_track.py`. Run `smoke_test.py` first, then `pythonista_track.py`.
 
+The generated launchers select the runtime beside their own file, independently
+of the working directory, and clear cached `tinygeo` imports before loading it.
+This supports repeated runs in a persistent interpreter and side-by-side older
+bundles. The smoke test prints the loaded runtime path. A missing adjacent runtime
+produces an extraction/layout error instead of falling back to another installation.
+
+If an older launcher imports `tinygeo.tinygeo`, or a traceback names a different
+bundle folder, extract a current full ZIP into a fresh folder and use its scripts
+and runtime together. Keep the normal `from tinygeo import ...` imports. The outer
+extraction folder can contain the inner `tinygeo/` package; extra dotted imports
+can select an old nested package and do not update its API. Preserve the filename
+`tinygeo/__init__.py`, including the double underscores.
+
 Build/extract a current real-data deployment following the deployer guide, then
 run `pythonista_track.py` beside its `tinygeo/` package or embedded `tinygeo.py`.
 Tap **Start** and allow location access. The view shows the latest fix/time/age,
