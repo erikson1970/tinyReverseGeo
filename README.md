@@ -61,10 +61,15 @@ Install its optional dependencies in the project environment:
 ```
 
 In VS Code, select `.venv/bin/python` as the notebook kernel, then **Run All**.
-The notebook includes editable coordinates, a reference-point plot, batch queries,
+The notebook includes editable coordinates, reference-point plots, batch queries,
 feature filters, a custom gazetteer, numerical checks, and a small timing experiment.
-It uses synthetic data and does not download anything when run. For a standalone
-Jupyter interface, install JupyterLab separately and open the same notebook.
+Its Robinson world map shows the real deployed dataset, colored by feature type;
+it uses the current `db` or loads the generated 10,000-point external dataset.
+That map uses optional notebook-only Cartopy and downloads the small Natural Earth
+110m land/coastline basemap on first use to ignored `data_sources/cartopy/`.
+Subsequent map renders use the local cache. The synthetic demo cells and library
+lookups require no network. For a standalone Jupyter interface, install JupyterLab
+separately and open the same notebook.
 
 ## Lookup API
 

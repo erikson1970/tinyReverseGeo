@@ -31,5 +31,10 @@ Required attribution used in generated builds:
 
 License: [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
 
+The notebook's optional Robinson basemap uses Natural Earth 110m land/coastline
+layers, cached under ignored `data_sources/cartopy/`. Natural Earth declares these
+map data [public domain](https://www.naturalearthdata.com/about/terms-of-use/).
+They are plotting assets, separate from the GeoNames reference database.
+
 The project's source code is licensed under Apache License 2.0; see [LICENSE](LICENSE).
 External geographic data will retain its own source-specific license and attribution.
