@@ -188,6 +188,27 @@ class Gazetteer:
         point = [lat, lon] if altitude is None else [lat, lon, altitude]
         return self.locate_many([point], k=k, feature_types=feature_types, distance_mode=distance_mode)[0]
 
+    def _neighbors(self, point, ids):
+        distances, bearings = _geometry(point, self._coordinates[ids])
+        return [dict(asdict(self.records[int(idx)]), feature_id=self._feature_keys[int(idx)],
+                     distance_km=float(dist), distance_to_area_km=max(0.0, float(dist)-float(self._radii[int(idx)])),
+                     within_radius=bool(self._radii[int(idx)] > 0 and dist <= self._radii[int(idx)]),
+                     bearing_deg=bearing)
+                for idx, dist, bearing in zip(ids, distances, bearings)]
+
+    def _feature_match(self, point, identity):
+        """Closest support circle for a retained track label, even after a label change."""
+        if not hasattr(self, "_feature_rows"):
+            rows = {}
+            for index, key in enumerate(self._feature_keys):
+                rows.setdefault(key, []).append(index)
+            self._feature_rows = {key: np.asarray(ids, dtype=int) for key, ids in rows.items()}
+        ids = self._feature_rows[identity]
+        distances, _ = _geometry(point, self._coordinates[ids])
+        areas = np.maximum(0, distances-self._radii[ids])
+        best = np.lexsort((ids, distances, areas))[0]
+        return self._neighbors(point, ids[best:best+1])[0]
+
     def locate_many(self, positions, *, k=1, feature_types=None, distance_mode="area"):
         """Return ordered dictionaries for an N×2 or N×3 array/sequence.
 
@@ -220,14 +241,7 @@ class Gazetteer:
         landmarks = self._query(vectors, {"landmark"}, 1, distance_mode)
         regions = self._query(vectors, REGIONS, k, distance_mode)
 
-        def neighbors(point, ids):
-            distances, bearings = _geometry(point, self._coordinates[ids])
-            return [dict(asdict(self.records[int(idx)]), feature_id=self._feature_keys[int(idx)],
-                         distance_km=float(dist), distance_to_area_km=max(0.0, float(dist) - float(self._radii[int(idx)])),
-                         within_radius=bool(self._radii[int(idx)] > 0 and dist <= self._radii[int(idx)]),
-                         bearing_deg=bearing)
-                    for idx, dist, bearing in zip(ids, distances, bearings)]
-
+        neighbors = self._neighbors
         results = []
         for row, point in enumerate(points):
             matches = neighbors(point, selected[row])

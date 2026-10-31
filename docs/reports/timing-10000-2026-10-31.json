@@ -1,0 +1,16 @@
+{
+  "python": "3.10.16",
+  "numpy": "1.21.6",
+  "platform": "macOS-14.6.1-arm64-arm-64bit",
+  "records": 10000,
+  "dataset_id": "tinygeo-c5f36386a63bde416304",
+  "distance_mode": "area",
+  "single_queries": 200,
+  "batch_size": 10000,
+  "construction_and_first_lookup_ms": 85.86629293859005,
+  "warm_single_median_ms": 3.775833174586296,
+  "warm_single_p95_ms": 4.714762140065431,
+  "batch_seconds": 36.91664425097406,
+  "process_peak_rss_mib": 101.578125,
+  "note": "Complete results including formatting; timings describe this machine and dataset."
+}

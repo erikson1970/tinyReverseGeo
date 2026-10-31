@@ -48,3 +48,13 @@ settlement boundaries.
 
 The project's source code is licensed under Apache License 2.0; see [LICENSE](LICENSE).
 External geographic data will retain its own source-specific license and attribution.
+
+Adaptive ocean builds also pin Natural Earth's public-domain `ne_110m_land.zip`
+as a build-only coastline mask. It is not shipped as a runtime GIS layer; its
+source URL/checksum and attribution travel in the deployment metadata.
+
+The optional desktop `evaluation` extra uses
+[`reverse_geocoder` 1.5.1](https://github.com/thampiman/reverse-geocoder), whose
+code is LGPL-licensed and whose bundled city records originate with GeoNames.
+It is a comparison tool, not included in TinyGeo wheels or deployment bundles.
+Evaluation reports identify the baseline version and bundled-data checksum.

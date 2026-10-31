@@ -14,8 +14,8 @@ with NumPy 2.5.4. On **2026-10-31**, the user confirmed basic lookup execution o
 iPhone running Pythonista and described it as seemingly instantaneous without
 `%timeit`. Exact device/software versions and measured timings were not supplied;
 the full device benchmark and release test matrix remain pending. The bundled
-six-point database is synthetic; this package does not yet provide useful real-world
-coverage or the device-tracking application planned in PROJECT.md.
+six-point database is synthetic. Use the real-data deployer for useful coverage
+and the new foreground companion prototype described in [tracking.md](tracking.md).
 
 ## Make a portable bundle on desktop
 
@@ -49,9 +49,10 @@ Alternatively copy `src/tinygeo/` and `examples/pythonista_smoke.py` into a sing
 folder yourself. No pip installation or network is required to run the scripts.
 
 The smoke test reports whether Pythonista's `location` module is available but
-does not start updates or request location access. Actual device tracking,
-history, 15-minute/1-hour/2-hour projections, and background behavior remain the
-[planned companion release](https://github.com/erikson1970/tinyReverseGeo/blob/main/PROJECT.md#future-release-todo-pythonista--ios-track-companion).
+does not start updates or request location access. Current real-data bundles also
+include `pythonista_track.py` with local history and 15-minute/1-hour/2-hour
+extrapolations. That new UI still needs a physical-device trial; background and
+screen-lock recording are not promised. See [tracking.md](tracking.md).
 
 ## Why no runtime tree?
 

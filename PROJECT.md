@@ -229,7 +229,13 @@ The `confidence` field describes **proximity to reference locations**, not verif
 
 ### Ocean and regional descriptions
 
-Ocean coverage is a **stretch goal**, not something the point database can reliably solve on its own. A nearest-island lookup does not establish which ocean, sea, or country contains a coordinate. For v1, use a qualified “nearest known reference point” description offshore. Later, optionally add coarse ocean/major-region polygons or another properly licensed classifier, explicitly keeping it separate from the point gazetteer. Never infer authoritative geographic boundaries from nearest-place country codes.
+A nearest-island lookup does not establish which ocean, sea, or country contains
+a coordinate. Natural Earth builds now supplement point references with approximate
+physical-region circles sampled from licensed source polygons at build time.
+They provide qualified ocean/sea context without a runtime GIS dependency. Point-only
+builds retain the qualified “nearest known reference point” description offshore.
+Never infer authoritative geographic boundaries from nearest-place country codes
+or fuzzy circle membership.
 
 ### Track summaries
 
@@ -269,9 +275,16 @@ Optional: generate a map of selected locations and a geographic error/coverage h
 
 ## Future release TODO: Pythonista / iOS track companion
 
+Implemented prototype: `describe_track` / `TrackTracker`, spherical motion and
+three forecast horizons, foreground Start/Stop UI, local JSON Lines capture,
+journal replay, and CSV export. Desktop replay/acquisition tests pass. The checklist
+below remains the physical-device release acceptance list; it is not a claim that
+background recording or a production iOS release has been verified.
+
 Deliver a versioned, importable Pythonista bundle that uses the shared TinyGeo
-library and offline gazetteer on iPhone/iPad. This is planned work, not currently
-supported functionality or an additional gate for desktop v1.
+library and offline gazetteer on iPhone/iPad. A foreground prototype and shared
+track/motion APIs now exist; physical-device verification remains pending and is
+not an additional gate for desktop v1. See [docs/tracking.md](docs/tracking.md).
 
 ### Compatibility and packaging recommendation
 
@@ -300,8 +313,9 @@ Use **one shared database and a NumPy lookup backend** across desktop and iOS:
 - [ ] Produce a downloadable ZIP containing the importable library, compressed
   data, launcher script, attribution, version/checksum manifest, and copy/run
   instructions. Require no package installation, downloads, or network at runtime.
-  The deployer now produces real lookup-only bundles in both layouts; the device
-  tracking launcher/UI and release verification remain pending.
+  The deployer now includes real-data bundles, a foreground tracking launcher/UI,
+  manifests, and instructions in both layouts; physical-device release verification
+  remains pending.
 
 ### Device tracking and presentation
 

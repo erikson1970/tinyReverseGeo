@@ -74,3 +74,35 @@ device separately. Reproduce on desktop with:
 .venv/bin/python tools/benchmark_lookup.py \
   --dataset dist/tinygeo-physical-pythonista-external-10000/dataset.json.gz
 ```
+
+## Staggered dataset and large batches
+
+For dataset `tinygeo-c5f36386a63bde416304` (10,000 rows / 7,832 features),
+measured the generated **Pythonista external runtime profile** on this Mac using
+Python 3.10.16 / NumPy 1.21.6. Each scale ran in a fresh process, with 200 warm
+single lookups before its batch. The bounded scan profile is 65,536 pairs.
+
+| Batch samples | Batch time | Process peak RSS |
+|---|---:|---:|
+| 1,000 | 3.53 s | 92.8 MiB |
+| 10,000 | 36.92 s | 101.6 MiB |
+| 100,000 | 364.75 s | 477.3 MiB |
+
+The 1,000-sample run had 3.87 ms median / 5.29 ms p95 warm single lookup latency.
+Cold load plus first lookup was 121.6 ms. These are desktop observations and can
+vary with machine load; the benchmark overlapped other development work.
+[Raw 1k](reports/timing-1000-2026-10-31.json),
+[10k](reports/timing-10000-2026-10-31.json), and
+[100k](reports/timing-100000-2026-10-31.json) reports retain all measurements.
+
+Peak RSS includes imports, inputs, full formatted result dictionaries, and scan
+arrays. Pairwise temporary arrays stay bounded, but returning 100,000 dictionaries
+still consumes memory proportional to the output. Do not use a giant batch for
+live phone capture: `TrackTracker` processes one fix at a time and the companion
+bounds its recent-motion window. For offline large tracks, process suitably sized
+chunks if full annotations are not needed simultaneously.
+
+To reproduce, extract a deployment ZIP and run its `benchmark_deployed.py` with
+`--batch-size 1000`, `10000`, or `100000` in separate processes. Its peak-RSS field
+is null on platforms lacking the optional standard-library `resource` module.
+Phone timing/battery measurements for the new fuzzy and tracking build remain pending.

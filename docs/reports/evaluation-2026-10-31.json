@@ -1,0 +1,1513 @@
+{
+  "dataset_id": "tinygeo-c5f36386a63bde416304",
+  "record_count": 10000,
+  "feature_count": 7832,
+  "dataset_sha256": "303bad7d246c951ea8be5a0ae1c370d0969a87e9dbd80c25c772c71ac8985510",
+  "seed": 20261031,
+  "python": "3.13.7",
+  "numpy": "2.5.4",
+  "baseline": {
+    "name": "reverse_geocoder",
+    "version": "1.5.1",
+    "source": "https://github.com/thampiman/reverse-geocoder",
+    "bundled_settlement_count": 144563,
+    "module_sha256": "64b4a62906216d6aa9718fae3b6332f323fc589cb57a048b2be15b1ed6cc0640",
+    "bundled_csv_sha256": "1de56dc32b0308c6094d5d833441c8ca25827f24e9a6a4cc144223ab5f9b65bf"
+  },
+  "notes": [
+    "Baseline is a comparison, not authoritative truth or country containment.",
+    "Both comparisons use nearest settlement CENTER distance; radii and physical features do not affect ranking.",
+    "Global sampling is area-uniform and includes oceans; settlement samples come from the older baseline CSV.",
+    "Settlement samples are unweighted and not independent population or visit-frequency truth.",
+    "Different source dates, selection budgets, place inclusion and name spellings explain disagreements.",
+    "Installed reverse_geocoder 1.5.1 queries raw lat/lon degrees; a separate spherical tree over the identical CSV isolates geometry from source/selection differences."
+  ],
+  "global_area_uniform": {
+    "count": 2000,
+    "tinygeo_center_distance_km": {
+      "min": 3.2381484479800355,
+      "median": 477.91023460761437,
+      "p90": 1880.6219405945471,
+      "p95": 2376.5788949408766,
+      "max": 4124.80875236297
+    },
+    "baseline_center_distance_km": {
+      "min": 0.42536253118518286,
+      "median": 513.7163097412682,
+      "p90": 1884.8589279302535,
+      "p95": 2408.463476305982,
+      "max": 5609.344410771234
+    },
+    "spherical_baseline_center_distance_km": {
+      "min": 0.42536253118518286,
+      "median": 495.4415587425359,
+      "p90": 1778.6574879871414,
+      "p95": 2119.5566023600327,
+      "max": 3231.3110768938445
+    },
+    "tinygeo_minus_spherical_baseline_distance_km": {
+      "min": -865.7500627545351,
+      "median": 0.0,
+      "p90": 58.80662051355764,
+      "p95": 97.48691429513856,
+      "max": 3461.2342439636354
+    },
+    "reference_locations_within_1km_of_spherical_baseline_fraction": 0.4085,
+    "tinygeo_minus_baseline_distance_km": {
+      "min": -2283.3775235105068,
+      "median": 0.0,
+      "p90": 44.06119715345337,
+      "p95": 67.53422155896742,
+      "max": 3334.9603212841544
+    },
+    "reference_locations_within_1km_fraction": 0.367,
+    "same_normalized_name_and_country_fraction": 0.3845,
+    "different_reference_country_fraction": 0.1075,
+    "independent_distance_check_max_error_km": 9.094947017729282e-13,
+    "distance_disagreement_examples": [
+      {
+        "query": [
+          -82.66442015886557,
+          -179.38785817614743
+        ],
+        "tinygeo": {
+          "name": "Invercargill",
+          "country_code": "NZ",
+          "distance_km": 4054.011334115983
+        },
+        "baseline": {
+          "name": "Waitangi",
+          "country_code": "NZ",
+          "distance_km": 4305.600895879816
+        },
+        "spherical_baseline": {
+          "name": "McMurdo Station",
+          "country_code": "AQ",
+          "distance_km": 592.7770901523477
+        },
+        "excess_over_spherical_baseline_km": 3461.2342439636354,
+        "excess_center_distance_km": -251.58956176383253
+      },
+      {
+        "query": [
+          -82.55113332071802,
+          -165.43776261662492
+        ],
+        "tinygeo": {
+          "name": "Ushuaia",
+          "country_code": "AR",
+          "distance_km": 4088.1138957070934
+        },
+        "baseline": {
+          "name": "Waitangi",
+          "country_code": "NZ",
+          "distance_km": 4309.732986413979
+        },
+        "spherical_baseline": {
+          "name": "McMurdo Station",
+          "country_code": "AQ",
+          "distance_km": 729.0066613573069
+        },
+        "excess_over_spherical_baseline_km": 3359.1072343497863,
+        "excess_center_distance_km": -221.6190907068858
+      },
+      {
+        "query": [
+          -81.54735096320184,
+          131.70059824069898
+        ],
+        "tinygeo": {
+          "name": "Invercargill",
+          "country_code": "NZ",
+          "distance_km": 4124.80875236297
+        },
+        "baseline": {
+          "name": "McMurdo Station",
+          "country_code": "AQ",
+          "distance_km": 789.8484310788158
+        },
+        "spherical_baseline": {
+          "name": "McMurdo Station",
+          "country_code": "AQ",
+          "distance_km": 789.8484310788158
+        },
+        "excess_over_spherical_baseline_km": 3334.9603212841544,
+        "excess_center_distance_km": 3334.9603212841544
+      },
+      {
+        "query": [
+          -77.53637771060419,
+          158.7310211778113
+        ],
+        "tinygeo": {
+          "name": "Invercargill",
+          "country_code": "NZ",
+          "distance_km": 3487.908279987786
+        },
+        "baseline": {
+          "name": "McMurdo Station",
+          "country_code": "AQ",
+          "distance_km": 191.29778105150834
+        },
+        "spherical_baseline": {
+          "name": "McMurdo Station",
+          "country_code": "AQ",
+          "distance_km": 191.29778105150834
+        },
+        "excess_over_spherical_baseline_km": 3296.6104989362775,
+        "excess_center_distance_km": 3296.6104989362775
+      },
+      {
+        "query": [
+          -80.29800086859754,
+          130.59880219484606
+        ],
+        "tinygeo": {
+          "name": "Invercargill",
+          "country_code": "NZ",
+          "distance_km": 4038.786167575008
+        },
+        "baseline": {
+          "name": "McMurdo Station",
+          "country_code": "AQ",
+          "distance_km": 792.1566643690899
+        },
+        "spherical_baseline": {
+          "name": "McMurdo Station",
+          "country_code": "AQ",
+          "distance_km": 792.1566643690899
+        },
+        "excess_over_spherical_baseline_km": 3246.6295032059184,
+        "excess_center_distance_km": 3246.6295032059184
+      },
+      {
+        "query": [
+          25.026787413704042,
+          141.60627130242227
+        ],
+        "tinygeo": {
+          "name": "Hutami",
+          "country_code": "JP",
+          "distance_km": 236.2056882975303
+        },
+        "baseline": {
+          "name": "Shimoda",
+          "country_code": "JP",
+          "distance_km": 1101.9557510520654
+        },
+        "spherical_baseline": {
+          "name": "Shimoda",
+          "country_code": "JP",
+          "distance_km": 1101.9557510520654
+        },
+        "excess_over_spherical_baseline_km": -865.7500627545351,
+        "excess_center_distance_km": -865.7500627545351
+      },
+      {
+        "query": [
+          26.481602167240773,
+          145.54569059141295
+        ],
+        "tinygeo": {
+          "name": "Hutami",
+          "country_code": "JP",
+          "distance_km": 338.6289391722194
+        },
+        "baseline": {
+          "name": "Katsuura",
+          "country_code": "JP",
+          "distance_km": 1084.5148710123071
+        },
+        "spherical_baseline": {
+          "name": "Katsuura",
+          "country_code": "JP",
+          "distance_km": 1084.5148710123071
+        },
+        "excess_over_spherical_baseline_km": -745.8859318400878,
+        "excess_center_distance_km": -745.8859318400878
+      },
+      {
+        "query": [
+          81.640643277346,
+          -104.661605523984
+        ],
+        "tinygeo": {
+          "name": "Qaanaaq",
+          "country_code": "GL",
+          "distance_km": 830.9963529043351
+        },
+        "baseline": {
+          "name": "Gjoa Haven",
+          "country_code": "CA",
+          "distance_km": 1464.6366623967892
+        },
+        "spherical_baseline": {
+          "name": "Gjoa Haven",
+          "country_code": "CA",
+          "distance_km": 1464.6366623967892
+        },
+        "excess_over_spherical_baseline_km": -633.6403094924541,
+        "excess_center_distance_km": -633.6403094924541
+      },
+      {
+        "query": [
+          58.405141903325585,
+          -68.50208825370224
+        ],
+        "tinygeo": {
+          "name": "Kuujjuaq",
+          "country_code": "CA",
+          "distance_km": 33.65388379170721
+        },
+        "baseline": {
+          "name": "Iqaluit",
+          "country_code": "CA",
+          "distance_km": 593.9855605363998
+        },
+        "spherical_baseline": {
+          "name": "Iqaluit",
+          "country_code": "CA",
+          "distance_km": 593.9855605363998
+        },
+        "excess_over_spherical_baseline_km": -560.3316767446926,
+        "excess_center_distance_km": -560.3316767446926
+      },
+      {
+        "query": [
+          58.160209137307845,
+          -69.21247272482874
+        ],
+        "tinygeo": {
+          "name": "Kuujjuaq",
+          "country_code": "CA",
+          "distance_km": 48.07503099444616
+        },
+        "baseline": {
+          "name": "Iqaluit",
+          "country_code": "CA",
+          "distance_km": 622.3434342083619
+        },
+        "spherical_baseline": {
+          "name": "Labrador City",
+          "country_code": "CA",
+          "distance_km": 597.4667497799752
+        },
+        "excess_over_spherical_baseline_km": -549.3917187855291,
+        "excess_center_distance_km": -574.2684032139158
+      }
+    ]
+  },
+  "baseline_settlement_positions": {
+    "count": 2000,
+    "tinygeo_center_distance_km": {
+      "min": 0.0,
+      "median": 43.403834412304235,
+      "p90": 91.25493677600527,
+      "p95": 108.72321631702012,
+      "max": 176.28081274164353
+    },
+    "baseline_center_distance_km": {
+      "min": 0.0,
+      "median": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "max": 0.0
+    },
+    "spherical_baseline_center_distance_km": {
+      "min": 0.0,
+      "median": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "max": 0.0
+    },
+    "tinygeo_minus_spherical_baseline_distance_km": {
+      "min": 0.0,
+      "median": 43.403834412304235,
+      "p90": 91.25493677600527,
+      "p95": 108.72321631702012,
+      "max": 176.28081274164353
+    },
+    "reference_locations_within_1km_of_spherical_baseline_fraction": 0.0375,
+    "tinygeo_minus_baseline_distance_km": {
+      "min": 0.0,
+      "median": 43.403834412304235,
+      "p90": 91.25493677600527,
+      "p95": 108.72321631702012,
+      "max": 176.28081274164353
+    },
+    "reference_locations_within_1km_fraction": 0.0375,
+    "same_normalized_name_and_country_fraction": 0.037,
+    "different_reference_country_fraction": 0.0675,
+    "independent_distance_check_max_error_km": 2.842170943040401e-14,
+    "distance_disagreement_examples": [
+      {
+        "query": [
+          -6.8745,
+          115.3704
+        ],
+        "tinygeo": {
+          "name": "Situbondo",
+          "country_code": "ID",
+          "distance_km": 176.28081274164353
+        },
+        "baseline": {
+          "name": "Batuputih Atas",
+          "country_code": "ID",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Batuputih Atas",
+          "country_code": "ID",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 176.28081274164353,
+        "excess_center_distance_km": 176.28081274164353
+      },
+      {
+        "query": [
+          -8.75389,
+          -38.96583
+        ],
+        "tinygeo": {
+          "name": "Juazeiro do Norte",
+          "country_code": "BR",
+          "distance_km": 175.6005567426575
+        },
+        "baseline": {
+          "name": "Belem de Sao Francisco",
+          "country_code": "BR",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Belem de Sao Francisco",
+          "country_code": "BR",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 175.6005567426575,
+        "excess_center_distance_km": 175.6005567426575
+      },
+      {
+        "query": [
+          -6.8534,
+          115.2688
+        ],
+        "tinygeo": {
+          "name": "Situbondo",
+          "country_code": "ID",
+          "distance_km": 168.1590473400098
+        },
+        "baseline": {
+          "name": "Sumbernangka Tengah",
+          "country_code": "ID",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Sumbernangka Tengah",
+          "country_code": "ID",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 168.1590473400098,
+        "excess_center_distance_km": 168.1590473400098
+      },
+      {
+        "query": [
+          11.41194,
+          125.54583
+        ],
+        "tinygeo": {
+          "name": "Santa Monica",
+          "country_code": "PH",
+          "distance_km": 163.86300647853344
+        },
+        "baseline": {
+          "name": "Llorente",
+          "country_code": "PH",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Llorente",
+          "country_code": "PH",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 163.86300647853344,
+        "excess_center_distance_km": 163.86300647853344
+      },
+      {
+        "query": [
+          37.40835,
+          -102.61436
+        ],
+        "tinygeo": {
+          "name": "Liberal",
+          "country_code": "US",
+          "distance_km": 155.33163761651602
+        },
+        "baseline": {
+          "name": "Springfield",
+          "country_code": "US",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Springfield",
+          "country_code": "US",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 155.33163761651602,
+        "excess_center_distance_km": 155.33163761651602
+      },
+      {
+        "query": [
+          0.5635,
+          34.56055
+        ],
+        "tinygeo": {
+          "name": "Bungoma",
+          "country_code": "KE",
+          "distance_km": 0.0
+        },
+        "baseline": {
+          "name": "Bungoma",
+          "country_code": "KE",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Bungoma",
+          "country_code": "KE",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 0.0,
+        "excess_center_distance_km": 0.0
+      },
+      {
+        "query": [
+          -28.26278,
+          -52.40667
+        ],
+        "tinygeo": {
+          "name": "Passo Fundo",
+          "country_code": "BR",
+          "distance_km": 0.0
+        },
+        "baseline": {
+          "name": "Passo Fundo",
+          "country_code": "BR",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Passo Fundo",
+          "country_code": "BR",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 0.0,
+        "excess_center_distance_km": 0.0
+      },
+      {
+        "query": [
+          14.53333,
+          100.91667
+        ],
+        "tinygeo": {
+          "name": "Saraburi",
+          "country_code": "TH",
+          "distance_km": 0.0
+        },
+        "baseline": {
+          "name": "Saraburi",
+          "country_code": "TH",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Saraburi",
+          "country_code": "TH",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 0.0,
+        "excess_center_distance_km": 0.0
+      },
+      {
+        "query": [
+          -41.27078,
+          173.28404
+        ],
+        "tinygeo": {
+          "name": "Nelson",
+          "country_code": "NZ",
+          "distance_km": 0.0
+        },
+        "baseline": {
+          "name": "Nelson",
+          "country_code": "NZ",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Nelson",
+          "country_code": "NZ",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 0.0,
+        "excess_center_distance_km": 0.0
+      },
+      {
+        "query": [
+          28.9383,
+          53.6482
+        ],
+        "tinygeo": {
+          "name": "Fasā",
+          "country_code": "IR",
+          "distance_km": 0.0
+        },
+        "baseline": {
+          "name": "Fasa",
+          "country_code": "IR",
+          "distance_km": 0.0
+        },
+        "spherical_baseline": {
+          "name": "Fasa",
+          "country_code": "IR",
+          "distance_km": 0.0
+        },
+        "excess_over_spherical_baseline_km": 0.0,
+        "excess_center_distance_km": 0.0
+      }
+    ]
+  },
+  "context_examples": [
+    {
+      "case": "New York",
+      "query": {
+        "lat": 40.7128,
+        "lon": -74.006
+      },
+      "description": "Near New York City (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:5128581",
+        "name": "New York City",
+        "lat": 40.71427,
+        "lon": -74.00597,
+        "feature_type": "city",
+        "country_code": "US",
+        "region": "New York",
+        "population": 8804190,
+        "radius_km": 40.0,
+        "feature_id": "geonames:5128581",
+        "radius_method": "population_density_assumption",
+        "distance_km": 0.16347632351742686,
+        "distance_to_area_km": 0.0,
+        "within_radius": true,
+        "bearing_deg": 0.8862270903321798
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104191:part675:grid1893",
+          "name": "Appalachian Mountains",
+          "lat": 42.5,
+          "lon": -72.5,
+          "feature_type": "mountain_range",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 347.754,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104191",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 234.87560317030616,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 31.716513426735958
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1730073633:part611:grid1892",
+          "name": "Allegheny Plateau",
+          "lat": 42.5,
+          "lon": -77.5,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 347.754,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1730073633",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 351.92306883396674,
+          "distance_to_area_km": 4.169068833966719,
+          "within_radius": false,
+          "bearing_deg": 305.52638778668984
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115057:part2:grid1820",
+          "name": "North Atlantic Ocean",
+          "lat": 37.5,
+          "lon": -75.0,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 357.087,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115057",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 367.3907598371311,
+          "distance_to_area_km": 10.30375983713111,
+          "within_radius": false,
+          "bearing_deg": 193.81556398844205
+        }
+      ]
+    },
+    {
+      "case": "London",
+      "query": {
+        "lat": 51.5074,
+        "lon": -0.1278
+      },
+      "description": "Near London (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:2643743",
+        "name": "London",
+        "lat": 51.50853,
+        "lon": -0.12574,
+        "feature_type": "city",
+        "country_code": "GB",
+        "region": "England",
+        "population": 8961989,
+        "radius_km": 40.0,
+        "feature_id": "geonames:2643743",
+        "radius_method": "population_density_assumption",
+        "distance_km": 0.19003704627083826,
+        "distance_to_area_km": 0.0,
+        "within_radius": true,
+        "bearing_deg": 48.60856348467281
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115879:part38:grid2052",
+          "name": "North Sea",
+          "lat": 52.5,
+          "lon": 2.5,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 327.907,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115879",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 211.02297551726502,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 57.43654799451585
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159116535:part69:anchor",
+          "name": "English Channel",
+          "lat": 49.80231,
+          "lon": -2.9879,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 333.328,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159116535",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 276.7298503277101,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 227.87435296062893
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104317:part721:grid1979",
+          "name": "North European Plain",
+          "lat": 47.5,
+          "lon": 0.0,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 337.938,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104317",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 445.69851537556457,
+          "distance_to_area_km": 107.76051537556458,
+          "within_radius": false,
+          "bearing_deg": 178.7647103515508
+        }
+      ]
+    },
+    {
+      "case": "Tokyo",
+      "query": {
+        "lat": 35.6762,
+        "lon": 139.6503
+      },
+      "description": "Near Tokyo (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:1850147",
+        "name": "Tokyo",
+        "lat": 35.6895,
+        "lon": 139.69171,
+        "feature_type": "city",
+        "country_code": "JP",
+        "region": "Tokyo",
+        "population": 9733276,
+        "radius_km": 40.0,
+        "feature_id": "geonames:1850147",
+        "radius_method": "population_density_assumption",
+        "distance_km": 4.021888166765188,
+        "distance_to_area_km": 0.0,
+        "within_radius": true,
+        "bearing_deg": 68.41337478820623
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115197:part8:grid1791",
+          "name": "Philippine Sea",
+          "lat": 32.5,
+          "lon": 137.5,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 365.699,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115197",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 404.87152129502243,
+          "distance_to_area_km": 39.17252129502242,
+          "within_radius": false,
+          "bearing_deg": 209.88729697043576
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115079:part3:grid1792",
+          "name": "North Pacific Ocean",
+          "lat": 32.5,
+          "lon": 142.5,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 365.699,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115079",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 439.94990690073257,
+          "distance_to_area_km": 74.25090690073256,
+          "within_radius": false,
+          "bearing_deg": 142.57786987772602
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115305:part304:grid1862",
+          "name": "Sea of Japan",
+          "lat": 37.5,
+          "lon": 135.0,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 357.087,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115305",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 461.9957578957605,
+          "distance_to_area_km": 104.90875789576052,
+          "within_radius": false,
+          "bearing_deg": 297.40602827903706
+        }
+      ]
+    },
+    {
+      "case": "Sahara",
+      "query": {
+        "lat": 24.0,
+        "lon": 13.0
+      },
+      "description": "Near Murzuq Desert (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:2219739",
+        "name": "Al Qaţrūn",
+        "lat": 24.95139,
+        "lon": 14.64861,
+        "feature_type": "town",
+        "country_code": "LY",
+        "region": "Murzuq District",
+        "population": 7243,
+        "radius_km": 1.518,
+        "feature_id": "geonames:2219739",
+        "radius_method": "population_density_assumption",
+        "distance_km": 197.55257235838576,
+        "distance_to_area_km": 196.03457235838576,
+        "within_radius": false,
+        "bearing_deg": 57.283181863431054
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159103617:part451:anchor",
+          "name": "Murzuq Desert",
+          "lat": 24.75965,
+          "lon": 13.16063,
+          "feature_type": "desert",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 205.736,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159103617",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 86.02168101802326,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 10.868454355645897
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104337:part730:grid1622",
+          "name": "Sahara",
+          "lat": 22.5,
+          "lon": 12.5,
+          "feature_type": "desert",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 379.982,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104337",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 174.43901236719827,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 197.1271818205059
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159102605:part74:anchor",
+          "name": "Jabal Bin Ghunaymah",
+          "lat": 23.97248,
+          "lon": 14.99883,
+          "feature_type": "mountain_range",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 330.664,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159102605",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 203.0877256628619,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 90.45694632969229
+        }
+      ]
+    },
+    {
+      "case": "Siberia",
+      "query": {
+        "lat": 67.0,
+        "lon": 110.0
+      },
+      "description": "Near Central Siberian Plateau (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:2014624",
+        "name": "Udachny",
+        "lat": 66.42989,
+        "lon": 112.4021,
+        "feature_type": "town",
+        "country_code": "RU",
+        "region": "Sakha",
+        "population": 15266,
+        "radius_km": 2.204,
+        "feature_id": "geonames:2014624",
+        "radius_method": "population_density_assumption",
+        "distance_km": 123.14364496117253,
+        "distance_to_area_km": 120.93964496117253,
+        "within_radius": false,
+        "bearing_deg": 119.8731600184872
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104227:part691:grid2289",
+          "name": "Central Siberian Plateau",
+          "lat": 67.5,
+          "lon": 110.0,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 299.629,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104227",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 55.59754011676582,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 0.0
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104025:part604:grid2288",
+          "name": "Putorana Plateau",
+          "lat": 67.5,
+          "lon": 105.0,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 225.002,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104025",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 222.00587967750812,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 286.795460181405
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159103899:part548:anchor",
+          "name": "Verkhoyansk Range",
+          "lat": 66.74918,
+          "lon": 128.23447,
+          "feature_type": "mountain_range",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 300.887,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159103899",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 793.9585497646823,
+          "distance_to_area_km": 493.0715497646823,
+          "within_radius": false,
+          "bearing_deg": 83.59337886987066
+        }
+      ]
+    },
+    {
+      "case": "Australian Outback",
+      "query": {
+        "lat": -24.0,
+        "lon": 134.0
+      },
+      "description": "Near MacDonnell Ranges (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:2077895",
+        "name": "Alice Springs",
+        "lat": -23.69748,
+        "lon": 133.88362,
+        "feature_type": "town",
+        "country_code": "AU",
+        "region": "Northern Territory",
+        "population": 25912,
+        "radius_km": 2.872,
+        "feature_id": "geonames:2077895",
+        "radius_method": "population_density_assumption",
+        "distance_km": 35.66025073375172,
+        "distance_to_area_km": 32.78825073375172,
+        "within_radius": false,
+        "bearing_deg": 340.59179585356605
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159103023:part217:anchor",
+          "name": "MacDonnell Ranges",
+          "lat": -23.38476,
+          "lon": 132.9125,
+          "feature_type": "mountain_range",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 273.895,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159103023",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 130.1600091763707,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 301.4887662105607
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104341:part731:grid998",
+          "name": "Western Plateau",
+          "lat": -22.5,
+          "lon": 135.0,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 379.982,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104341",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 195.592716025579,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 31.68738376233578
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104163:part662:grid927",
+          "name": "Great Artesian Basin",
+          "lat": -27.5,
+          "lon": 137.5,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 373.388,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104163",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 523.704867219775,
+          "distance_to_area_km": 150.31686721977502,
+          "within_radius": false,
+          "bearing_deg": 138.73822586773247
+        }
+      ]
+    },
+    {
+      "case": "Pacific",
+      "query": {
+        "lat": 0.0,
+        "lon": -140.0
+      },
+      "description": "Near South Pacific Ocean (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:8063344",
+        "name": "Taiohae",
+        "lat": -8.91093,
+        "lon": -140.09972,
+        "feature_type": "town",
+        "country_code": "PF",
+        "region": "Marquesas Islands",
+        "population": 1224,
+        "radius_km": 0.624,
+        "feature_id": "geonames:8063344",
+        "radius_method": "population_density_assumption",
+        "distance_km": 990.9131169613319,
+        "distance_to_area_km": 990.2891169613318,
+        "within_radius": false,
+        "bearing_deg": 180.63597835916553
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115099:part4:grid1231",
+          "name": "South Pacific Ocean",
+          "lat": -2.5,
+          "lon": -140.0,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 393.072,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115099",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 277.98770058383224,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 180.0
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115079:part3:grid1304",
+          "name": "North Pacific Ocean",
+          "lat": 2.5,
+          "lon": -137.5,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 393.072,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115079",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 393.0715829201335,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 44.97272057688159
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104005:part595:anchor",
+          "name": "Baja California Peninsula",
+          "lat": 27.40394,
+          "lon": -113.43582,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 373.525,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104005",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 4162.372929143506,
+          "distance_to_area_km": 3788.8479291435056,
+          "within_radius": false,
+          "bearing_deg": 40.780761543656226
+        }
+      ]
+    },
+    {
+      "case": "North Atlantic",
+      "query": {
+        "lat": 52.0,
+        "lon": -30.0
+      },
+      "description": "Near North Atlantic Ocean (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:3420846",
+        "name": "Qaqortoq",
+        "lat": 60.71839,
+        "lon": -46.03561,
+        "feature_type": "town",
+        "country_code": "GL",
+        "region": "Kujalleq",
+        "population": 3224,
+        "radius_km": 1.013,
+        "feature_id": "geonames:3420846",
+        "radius_method": "population_density_assumption",
+        "distance_km": 1377.1438525205172,
+        "distance_to_area_km": 1376.1308525205172,
+        "within_radius": false,
+        "bearing_deg": 320.95481746321366
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115057:part2:grid2046",
+          "name": "North Atlantic Ocean",
+          "lat": 52.5,
+          "lon": -27.5,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 666.496,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115057",
+          "radius_method": "remote_ocean_circle_merge",
+          "distance_km": 179.02894364478425,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 70.9230546096121
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1730072191:part354:anchor",
+          "name": "King Frederick VI Coast",
+          "lat": 62.03635,
+          "lon": -42.5871,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 309.277,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1730072191",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 1346.1982935742776,
+          "distance_to_area_km": 1036.9212935742776,
+          "within_radius": false,
+          "bearing_deg": 330.8415790877448
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115419:part17:grid2113",
+          "name": "Labrador Sea",
+          "lat": 57.5,
+          "lon": -50.0,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 317.958,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115419",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 1414.7169153077214,
+          "distance_to_area_km": 1096.7589153077213,
+          "within_radius": false,
+          "bearing_deg": 303.4450819055205
+        }
+      ]
+    },
+    {
+      "case": "Antarctica",
+      "query": {
+        "lat": -82.0,
+        "lon": 0.0
+      },
+      "description": "Near Antarctic Plateau (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:3426466",
+        "name": "Grytviken",
+        "lat": -54.28111,
+        "lon": -36.5092,
+        "feature_type": "city",
+        "country_code": "GS",
+        "region": null,
+        "population": 2,
+        "radius_km": 0.5,
+        "feature_id": "geonames:3426466",
+        "radius_method": "population_density_assumption",
+        "distance_km": 3293.9414598330495,
+        "distance_to_area_km": 3293.4414598330495,
+        "within_radius": false,
+        "bearing_deg": 315.35611986945815
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104525:part812:grid107",
+          "name": "Antarctic Plateau",
+          "lat": -82.5,
+          "lon": 0.0,
+          "feature_type": "physical_region",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 281.121,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104525",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 55.59754011676582,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 180.0
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104515:part808:anchor",
+          "name": "Shackleton Range",
+          "lat": -80.51098,
+          "lon": -24.21469,
+          "feature_type": "mountain_range",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 119.387,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104515",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 437.45414334453585,
+          "distance_to_area_km": 318.06714334453585,
+          "within_radius": false,
+          "bearing_deg": 279.7521196396688
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159104505:part802:grid97",
+          "name": "Transantarctic Mountains",
+          "lat": -82.5,
+          "lon": -50.0,
+          "feature_type": "mountain_range",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 281.121,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159104505",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 728.3161279135438,
+          "distance_to_area_km": 447.19512791354384,
+          "within_radius": false,
+          "bearing_deg": 241.23124783526666
+        }
+      ]
+    },
+    {
+      "case": "South of Iceland",
+      "query": {
+        "lat": 62.0,
+        "lon": -20.0
+      },
+      "description": "Near North Atlantic Ocean (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:3413829",
+        "name": "Reykjavík",
+        "lat": 64.13548,
+        "lon": -21.89541,
+        "feature_type": "city",
+        "country_code": "IS",
+        "region": "Capital Region",
+        "population": 118918,
+        "radius_km": 6.152,
+        "feature_id": "geonames:3413829",
+        "radius_method": "population_density_assumption",
+        "distance_km": 255.89774079296424,
+        "distance_to_area_km": 249.74574079296426,
+        "within_radius": false,
+        "bearing_deg": 338.94112302754405
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115057:part2:grid2192",
+          "name": "North Atlantic Ocean",
+          "lat": 62.5,
+          "lon": -17.5,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 308.418,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115057",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 140.8587728360536,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 65.65162792884817
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_regions_polys:1159103109:part255:anchor",
+          "name": "Vatnajökull",
+          "lat": 64.44495,
+          "lon": -16.80749,
+          "feature_type": "mountain_range",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 78.859,
+          "feature_id": "naturalearth:ne_10m_geography_regions_polys:1159103109",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 315.3333826293113,
+          "distance_to_area_km": 236.47438262931132,
+          "within_radius": false,
+          "bearing_deg": 29.050316907058217
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115695:part29:grid2263",
+          "name": "Greenland Sea",
+          "lat": 67.5,
+          "lon": -20.0,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 299.629,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115695",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 611.5729412844311,
+          "distance_to_area_km": 311.94394128443105,
+          "within_radius": false,
+          "bearing_deg": 0.0
+        }
+      ]
+    },
+    {
+      "case": "Dateline",
+      "query": {
+        "lat": 0.0,
+        "lon": 180.0
+      },
+      "description": "Near North Pacific Ocean (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:2110121",
+        "name": "Rungata",
+        "lat": -1.34244,
+        "lon": 176.43567,
+        "feature_type": "town",
+        "country_code": "KI",
+        "region": "Gilbert Islands",
+        "population": 933,
+        "radius_km": 0.545,
+        "feature_id": "geonames:2110121",
+        "radius_method": "population_density_assumption",
+        "distance_km": 423.4805624403696,
+        "distance_to_area_km": 422.9355624403696,
+        "within_radius": false,
+        "bearing_deg": 249.34637597401263
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115079:part3:grid1367",
+          "name": "North Pacific Ocean",
+          "lat": 2.5,
+          "lon": 177.5,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 393.072,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115079",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 393.0715829201335,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": 315.0272794231184
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115099:part4:grid1294",
+          "name": "South Pacific Ocean",
+          "lat": -2.5,
+          "lon": 175.0,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 393.072,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115099",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 621.4414835159162,
+          "distance_to_area_km": 228.36948351591616,
+          "within_radius": false,
+          "bearing_deg": 243.39127680946496
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115219:part303:grid1148",
+          "name": "Coral Sea",
+          "lat": -12.5,
+          "lon": 165.0,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 389.358,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115219",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 2160.8858400245767,
+          "distance_to_area_km": 1771.5278400245768,
+          "within_radius": false,
+          "bearing_deg": 229.41788294013335
+        }
+      ]
+    },
+    {
+      "case": "North Pole",
+      "query": {
+        "lat": 90.0,
+        "lon": 0.0
+      },
+      "description": "Near Arctic Ocean (within its estimated proximity zone).",
+      "nearest_settlement": {
+        "source_id": "geonames:2729907",
+        "name": "Longyearbyen",
+        "lat": 78.22334,
+        "lon": 15.64689,
+        "feature_type": "city",
+        "country_code": "SJ",
+        "region": "Svalbard",
+        "population": 2368,
+        "radius_km": 0.868,
+        "feature_id": "geonames:2729907",
+        "radius_method": "population_density_assumption",
+        "distance_km": 1309.506653583038,
+        "distance_to_area_km": 1308.6386535830381,
+        "within_radius": false,
+        "bearing_deg": null
+      },
+      "nearby_regions": [
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115017:part0:grid2552",
+          "name": "Arctic Ocean",
+          "lat": 87.5,
+          "lon": -15.0,
+          "feature_type": "ocean",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 278.516,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115017",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 277.98770058383195,
+          "distance_to_area_km": 0.0,
+          "within_radius": true,
+          "bearing_deg": null
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159115695:part29:grid2480",
+          "name": "Greenland Sea",
+          "lat": 82.5,
+          "lon": -17.5,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 281.121,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159115695",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 833.9631017514972,
+          "distance_to_area_km": 552.8421017514972,
+          "within_radius": false,
+          "bearing_deg": null
+        },
+        {
+          "source_id": "naturalearth:ne_10m_geography_marine_polys:1159117355:part113:anchor",
+          "name": "Lincoln Sea",
+          "lat": 82.57148,
+          "lon": -55.2195,
+          "feature_type": "sea",
+          "country_code": null,
+          "region": null,
+          "population": null,
+          "radius_km": 246.464,
+          "feature_id": "naturalearth:ne_10m_geography_marine_polys:1159117355",
+          "radius_method": "polygon_sample_circle",
+          "distance_km": 826.0148774164049,
+          "distance_to_area_km": 579.550877416405,
+          "within_radius": false,
+          "bearing_deg": null
+        }
+      ]
+    }
+  ]
+}

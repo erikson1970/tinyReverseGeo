@@ -140,7 +140,8 @@ sys.modules['scipy'] = None
 sys.modules['geopy'] = None
 from tinygeo import dataset_info, locate, Gazetteer
 import tinygeo
-assert set(tinygeo.__all__) == {{'Gazetteer', 'Reference', 'dataset_info', 'locate', 'locate_many'}}
+assert set(tinygeo.__all__) == {{'Gazetteer', 'Reference', 'dataset_info', 'locate', 'locate_many',
+                                'TrackTracker', 'describe_track', 'estimate_motion', 'project_motion'}}
 info = dataset_info()
 assert info['record_count'] == 12 and info['kind'] == 'geographic'
 assert locate(20, 30)['nearest']['name'] == 'Café Peak'

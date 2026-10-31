@@ -49,10 +49,13 @@ def runtime_source(profile):
 def package_payload(data_gz, layout, profile):
     runtime = runtime_source(profile)
     data_code = (ROOT / "src/tinygeo/data.py").read_text(encoding="utf-8")
+    extra = {name: (ROOT / f"src/tinygeo/{name}.py").read_text(encoding="utf-8")
+             for name in ("track", "motion")}
     if layout == "external":
         return {"tinygeo/__init__.py": (ROOT / "src/tinygeo/__init__.py").read_bytes(),
                 "tinygeo/lookup.py": (ast.unparse(runtime) + "\n").encode("utf-8"),
                 "tinygeo/data.py": data_code.encode("utf-8"),
+                **{f"tinygeo/{name}.py": code.encode("utf-8") for name, code in extra.items()},
                 "tinygeo/resources/geodb.json.gz": data_gz}
     data_tree = ast.parse(data_code)
     replacement = ast.parse("def load_default_dataset():\n    return decode_dataset(base64.b64decode(_EMBEDDED_DATA))").body[0]
@@ -68,13 +71,18 @@ def package_payload(data_gz, layout, profile):
     public_api = ast.parse((ROOT / "src/tinygeo/__init__.py").read_text(encoding="utf-8"))
     exports = next(n for n in public_api.body if isinstance(n, ast.Assign)
                    and any(isinstance(t, ast.Name) and t.id == "__all__" for t in n.targets))
-    module = header + ast.unparse(data_tree) + "\n" + ast.unparse(runtime) + "\n" + ast.unparse(exports) + "\n"
+    extra_code = []
+    for code in extra.values():
+        tree = ast.parse(code)
+        tree.body = [n for n in tree.body if not isinstance(n, ast.ImportFrom) or not n.level]
+        extra_code.append(ast.unparse(tree))
+    module = header + "\n".join([ast.unparse(data_tree), ast.unparse(runtime), *extra_code, ast.unparse(exports)]) + "\n"
     return {"tinygeo.py": module.encode("utf-8")}
 
 
 SMOKE = '''"""Offline smoke test for a generated TinyGeo build."""
 import json
-from tinygeo import dataset_info, locate, locate_many
+from tinygeo import dataset_info, locate, locate_many, describe_track, estimate_motion, project_motion
 
 info = dataset_info()
 result = locate(42.36, -71.06, k=3)
@@ -83,6 +91,10 @@ assert nearest is not None
 assert locate(nearest["lat"], nearest["lon"])["nearest"]["distance_km"] < 1e-7
 assert len(locate_many([[0, 180], [90, 0], [-90, 0]])) == 3
 assert result["synthetic"] is False
+assert len(describe_track([[0, 0]]*3, [0, 10, 20])) == 1
+motion = estimate_motion([[0, 0]]*3, [0, 10, 20])
+assert motion["status"] == "stationary"
+assert len(project_motion(motion)) == 3
 print("Dataset:", info["dataset_id"], "| References:", info["record_count"])
 print(result["description"])
 print(json.dumps(result["neighbors"], indent=2, ensure_ascii=False))
@@ -100,6 +112,8 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
                        "gzip_target_bytes": 1_000_000, "gzip_target_met": len(compressed) <= 1_000_000}
     payload["smoke_test.py"] = SMOKE.encode("utf-8")
     payload["benchmark_deployed.py"] = (ROOT / "tools/benchmark_lookup.py").read_bytes()
+    payload["pythonista_track.py"] = (ROOT / "examples/pythonista_track.py").read_bytes()
+    payload["TRACKING.md"] = (ROOT / "docs/tracking.md").read_bytes()
     instructions = (f"TinyGeo deployment: {target}, {layout}, {dataset['record_count']} references.\n\n"
                     "Requires Python >=3.10 and NumPy >=1.21.6; no SciPy/geopy or network at runtime.\n"
                     "Extract this ZIP into an application/script folder, preserving all paths.\n"
@@ -109,7 +123,8 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
                     "For an external build, copy the entire tinygeo/ directory.\n\n"
                     "Nearby references are approximate context; their country/region is not query containment.\n"
                     "The source set and feature coverage are described in build-report.json.\n"
-                    "Physical Pythonista validation and the tracking UI remain separate work.\n\n"
+                    "Run pythonista_track.py for the foreground track prototype; see TRACKING.md.\n"
+                    "The UI, battery use, backgrounding and screen-lock behavior need physical-device testing.\n\n"
                     + dataset["attribution"] + "\n" + LICENSE_URL + "\n")
     payload["README.txt"] = instructions.encode("utf-8")
     payload["LICENSE"] = (ROOT / "LICENSE").read_bytes()

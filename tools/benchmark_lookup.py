@@ -64,6 +64,11 @@ def main():
     start = perf_counter()
     db.locate_many(batch, distance_mode=args.distance_mode)
     batch_seconds = perf_counter() - start
+    try:
+        import resource
+        peak_rss_mib = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024**2 if sys.platform == "darwin" else 1024)
+    except (ImportError, AttributeError, OSError):
+        peak_rss_mib = None
     print(json.dumps({
         "python": platform.python_version(), "numpy": np.__version__,
         "platform": platform.platform(), "records": count, "dataset_id": identity,
@@ -73,6 +78,7 @@ def main():
         "warm_single_median_ms": float(np.median(timings)),
         "warm_single_p95_ms": float(np.percentile(timings, 95)),
         "batch_seconds": batch_seconds,
+        "process_peak_rss_mib": peak_rss_mib,
         "note": "Complete results including formatting; timings describe this machine and dataset.",
     }, indent=2))
 

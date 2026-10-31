@@ -30,8 +30,9 @@ bulk downloads need no GeoNames API username. The output is
 Extract `tinygeo.zip` into your application's script folder. For Pythonista, copy
 that extracted folder into its script library and run `smoke_test.py`. Use
 `from tinygeo import locate, locate_many, dataset_info` in other scripts beside it.
-Device location recording and track prediction are separate planned app features;
-this tool packages the geographic lookup library.
+Run the included `pythonista_track.py` for the foreground companion prototype.
+`TRACKING.md` explains local history, replay/export, and motion extrapolations.
+The UI still needs physical-device validation.
 
 **Default-source limitation:** `cities500` primarily supplies settlements. It does
 not supply worldwide mountain/landmark coverage. The report marks settlement-only
@@ -286,7 +287,8 @@ neighbor. Results keep `distance_km` as center distance and expose
 `distance_to_area_km`, `within_radius`, `nearest_region`, and `nearby_regions`.
 Use `distance_mode="center"` to ignore radii for ranking.
 
-Each new deployment includes `benchmark_deployed.py`, a plain-Python timing script
+Each new deployment includes `pythonista_track.py`, `TRACKING.md`, and
+`benchmark_deployed.py`, a plain-Python timing script
 that benchmarks the bundled real dataset on desktop or Pythonista without IPython
 magics. The [decision log](decisions.md) records accuracy and simplicity choices.
 

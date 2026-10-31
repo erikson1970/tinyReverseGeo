@@ -5,8 +5,10 @@ for the full project design and acceptance criteria.
 
 **Status:** the development package bundles six synthetic test/demo references.
 The [deployer](docs/deployer.md) now builds real GeoNames databases and offline
-application bundles with a requested point count. Track summaries, the iOS tracking
-UI, and full geographic evaluation remain pending. Synthetic lookups are explicitly
+application bundles with a requested point count. Track summaries, spherical motion
+estimates, and a foreground Pythonista companion prototype are implemented. Device
+validation of the new UI remains pending. An initial geographic comparison is
+available in [docs/evaluation.md](docs/evaluation.md). Synthetic lookups are explicitly
 labeled; deployment artifacts carry their real source provenance.
 
 The fuzzy-circle milestone adds configurable settlement radii, Natural Earth
@@ -14,6 +16,11 @@ mountains/deserts/seas/oceans, and unique-feature results. Design assumptions an
 tradeoffs are recorded in [docs/decisions.md](docs/decisions.md). Physical builds
 use staggered grid rows and merge remote ocean circles while retaining fine detail
 near coasts and other known features; optimization happens entirely at build time.
+
+See [track history and forecasts](docs/tracking.md) for `describe_track`,
+`TrackTracker`, `estimate_motion`, `project_motion`, and `pythonista_track.py`.
+The companion stores local JSON Lines history and exports CSV without a database dependency.
+Try `.venv/bin/python examples/replay_track.py` or the notebook’s synthetic-flight replay cell.
 
 ## Development
 

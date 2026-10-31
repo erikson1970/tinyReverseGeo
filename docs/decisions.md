@@ -99,3 +99,63 @@ coarsening with such a lock fails instead of fetching an unpinned input.
 Revisit: adapt latitude spacing or use an equal-area mesh if polar redundancy
 matters. Replace the coarse coast guard only if device/route examples justify
 the added build complexity. Runtime remains a NumPy circle scan.
+
+## D007 — Confirm track transitions without changing saved history
+
+Share one incremental `TrackTracker` between batch replay and device capture.
+Prefer nearby settlement context, then nearby physical-region context, then a
+qualified distant reference. Require consecutive candidate samples, optional time
+dwell, and displacement from the active segment's first fix. Start a new event
+at the confirmation sample. Do not backdate its start or alter old annotations.
+Use closest observed approach to the retained feature's best support circle;
+neither a changing label nor a minimum sample distance proves a visit/passage.
+Gaps reset pending changes; missing timestamps remain missing.
+
+Revisit: retrospective backdating could improve edited trip reports, but must be
+an explicitly separate replay/export option rather than altering live journals.
+Thresholds default to 3 samples / 25 km; applications can lower the distance for
+walking/driving. Time dwell requires real timestamps.
+
+## D008 — Spherical motion, foreground capture, and JSON Lines history
+
+Fit recent unit-sphere positions versus time, then project velocity onto the latest
+fix's tangent. Extrapolate from that fix along a great circle at unchanged speed
+and initial direction, for 900/3,600/7,200 seconds. Pole-safe vectors avoid a local
+longitude singularity. Stationary estimates explicitly stay put; stale, noisy,
+jumping, or insufficient histories yield no forecasts. A sharp turn can temporarily
+invalidate the fit. This is conditional motion context, not route guidance.
+
+Use a foreground Pythonista prototype with lazy iOS imports, provider-independent
+acquisition, and Start/Stop cleanup. Accept only fresh, ordered, sufficiently
+accurate fixes when accuracy is reported. Ignore duplicate/out-of-order timestamps.
+Device UI/background/battery validation remains a physical-device task.
+
+Choose append-only JSON Lines for local timestamped fixes, explicit acquisition
+gaps, stable reference labels, dataset ID/settings, and final event summaries.
+Flush each accepted entry. CSV exports accepted fixes; replay requires the same
+dataset ID and thresholds. This needs no additional database package or compiled
+extension. Incomplete final crash writes are ignored; malformed complete lines fail.
+Bound the live motion window and retain events, rather than repeatedly reprocessing
+an ever-growing location history.
+
+Revisit: indexed SQLite storage for large multi-month histories or richer search,
+only after confirming the target device's module support and a concrete need.
+
+## D009 — Separate baseline geometry from dataset-selection gaps
+
+Evaluate nearest settlement centers independently of fuzzy physical features.
+Use `reverse_geocoder` 1.5.1 as requested, but inspection of the installed primary
+source shows that version querying raw latitude/longitude coordinates. Add a
+second spherical tree over its identical bundled CSV to distinguish geometry
+artifacts (especially dateline/polar cases) from TinyGeo's smaller/different source
+selection. Record package/module/data checksums and sampling seed.
+
+The initial comparison exposes a real limitation: compact cities500-based
+settlement coverage misses Antarctic research settlements present in the older
+baseline, and dense settled regions have fewer local references. Keep those gaps
+visible in the report rather than treating a baseline country label as containment
+or inventing reference records. Physical-region context remains separately useful.
+
+Revisit: add licensed source extracts for underrepresented regions/station types,
+or adjust settlement/physical allocation after field examples. A 10,000-row budget
+is an approximation, not exhaustive gazetteer coverage.
