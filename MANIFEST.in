@@ -1,3 +1,5 @@
 include PROJECT.md
 recursive-include examples *.py
 recursive-include notebooks *.ipynb
+recursive-include tools *.py
+recursive-include docs *.md

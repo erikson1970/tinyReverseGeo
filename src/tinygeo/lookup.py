@@ -7,7 +7,6 @@ import json
 from numbers import Integral
 
 import numpy as np
-from scipy.spatial import cKDTree
 
 EARTH_RADIUS_KM = 6371.0088
 FEATURE_TYPES = frozenset({
@@ -15,6 +14,8 @@ FEATURE_TYPES = frozenset({
     "remote_settlement", "other",
 })
 SETTLEMENTS = frozenset({"city", "town", "remote_settlement"})
+# Bound pairwise temporary arrays instead of allocating query_count × all_records.
+_MAX_SCAN_PAIRS = 262_144
 
 
 @dataclass(frozen=True)
@@ -70,9 +71,9 @@ def _geometry(query, targets):
 
 
 class Gazetteer:
-    """Reusable spherical indexes over a collection of reference points.
+    """Spherical NumPy scans over cached reference vectors and feature subsets.
 
-    Indexes are built once for each requested feature subset. Equal-distance
+    Batches are scanned in bounded chunks. Equal-distance
     neighbor ordering is unspecified. No lookup establishes area containment.
     """
 
@@ -88,25 +89,40 @@ class Gazetteer:
             raise ValueError("unsupported reference feature_type")
         self._coordinates = _positions([[r.lat, r.lon] for r in self.records])
         self._vectors = _xyz(self._coordinates)
-        self._indexes = {}
+        self._subsets = {FEATURE_TYPES: (np.arange(len(self.records)), self._vectors)}
         self.dataset_id = dataset_id
         self.synthetic = synthetic
 
-    def _index(self, types):
+    def _subset(self, types):
         key = frozenset(types)
-        if key not in self._indexes:
+        if key not in self._subsets:
             ids = np.array([i for i, r in enumerate(self.records)
                             if r.feature_type in key], dtype=int)
-            self._indexes[key] = (ids, cKDTree(self._vectors[ids]) if len(ids) else None)
-        return self._indexes[key]
+            self._subsets[key] = (ids, self._vectors[ids])
+        return self._subsets[key]
 
     def _query(self, vectors, types, k):
-        ids, tree = self._index(types)
-        if tree is None:
+        ids, references = self._subset(types)
+        if len(ids) == 0:
             return np.empty((len(vectors), 0), dtype=int)
         count = min(k, len(ids))
-        _, indices = tree.query(vectors, k=count)
-        return ids[np.asarray(indices).reshape(len(vectors), count)]
+        result = np.empty((len(vectors), count), dtype=int)
+        chunk_size = max(1, min(256, _MAX_SCAN_PAIRS // len(ids)))
+        for start in range(0, len(vectors), chunk_size):
+            queries = vectors[start:start + chunk_size]
+            # Direct differences preserve close-point ordering better than 2-2*dot.
+            delta = queries[:, None, :] - references[None, :, :]
+            squared = np.einsum("ijk,ijk->ij", delta, delta)
+            del delta
+            if count == 1:
+                nearest = np.argmin(squared, axis=1)[:, None]
+            else:
+                nearest = np.argpartition(squared, count - 1, axis=1)[:, :count]
+                distances = np.take_along_axis(squared, nearest, axis=1)
+                order = np.argsort(distances, axis=1)
+                nearest = np.take_along_axis(nearest, order, axis=1)
+            result[start:start + len(queries)] = ids[nearest]
+        return result
 
     def locate(self, lat, lon, *, altitude=None, k=1, feature_types=None):
         """Locate one point; optional altitude is validated but ignored."""
@@ -136,7 +152,7 @@ class Gazetteer:
             return []
         vectors = _xyz(points)
         selected = self._query(vectors, types, k)
-        any_ids = self._query(vectors, FEATURE_TYPES, 1)
+        any_ids = selected[:, :1] if types == FEATURE_TYPES else self._query(vectors, FEATURE_TYPES, 1)
         settlements = self._query(vectors, SETTLEMENTS, 1)
         landmarks = self._query(vectors, {"landmark"}, 1)
 

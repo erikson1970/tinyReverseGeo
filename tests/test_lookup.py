@@ -134,7 +134,7 @@ def test_offline_and_explicit_demo(monkeypatch):
     assert result["description"].startswith("Synthetic demo data.")
 
 
-def test_index_ranking_against_independent_haversine():
+def test_scan_ranking_against_independent_haversine():
     rng = np.random.default_rng(42)
     coordinates = rng.uniform([-90, -180], [90, 180], size=(200, 2))
     db = Gazetteer([ref(str(i), *p) for i, p in enumerate(coordinates)])
@@ -146,6 +146,28 @@ def test_index_ranking_against_independent_haversine():
              + np.cos(lat) * np.cos(qlat) * np.sin((lon - qlon) / 2) ** 2)
         expected = np.argsort(h)[:5]
         assert [n["source_id"] for n in result["neighbors"]] == list(map(str, expected))
+
+
+def test_very_close_references():
+    # At this separation dot-product distances can round both candidates to zero.
+    db = Gazetteer([ref("Farther", 0, 0.0000002), ref("Closer", 0, 0.0000001)])
+    result = db.locate(0, 0, k=2)
+    assert [n["name"] for n in result["neighbors"]] == ["Closer", "Farther"]
+    assert 0 < result["neighbors"][0]["distance_km"] < result["neighbors"][1]["distance_km"]
+
+
+@pytest.mark.parametrize("k", [1, 3, 100])
+def test_chunked_batch_matches_single_queries(monkeypatch, k):
+    monkeypatch.setattr("tinygeo.lookup._MAX_SCAN_PAIRS", 64)
+    db = Gazetteer([ref(str(i), i - 20, i * 2, "city" if i % 2 else "landmark")
+                    for i in range(40)])
+    points = [[i / 2, i] for i in range(9)]
+    for types in (None, {"landmark"}, {"city", "town"}, {"island"}):
+        results = db.locate_many(points, k=k, feature_types=types)
+        assert results == [db.locate(*p, k=k, feature_types=types) for p in points]
+        for result in results:
+            distances = [n["distance_km"] for n in result["neighbors"]]
+            assert distances == sorted(distances)
 
 
 def test_invalid_gazetteer():

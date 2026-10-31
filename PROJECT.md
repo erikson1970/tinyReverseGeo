@@ -8,7 +8,12 @@ The central idea is a carefully selected gazetteer of approximately **10,000 geo
 
 This is **approximate geographic context**, **not authoritative reverse geocoding**. In particular, the country or state associated with the nearest feature must *not* be presented as the verified country/state containing an arbitrary query coordinate.
 
-The runtime environment **does have NumPy**. Prioritize simplicity, accuracy, and vectorized batch performance over a strict standard-library-only implementation. A pure-Python fallback is desirable but not required for the first milestone.
+Target **Python >=3.10**, including Pythonista's documented interpreter, with
+**NumPy as the only external runtime dependency**. Prioritize simple, accurate
+lookups at device update rates (typically below 10 Hz), while retaining batch
+support. A dependency-free Python fallback is optional. Desktop database-building
+tools may use additional libraries such as SciPy; deployed artifacts must not
+require them.
 
 ## Desired outcomes
 
@@ -89,6 +94,11 @@ Implement a **reproducible selection algorithm** rather than relying only on pop
 5. Deduplicate locations that coincide or are the same site under variant names; retain separate feature classes where useful.
 6. Produce a diagnostic coverage report and map of the selected locations (optional visualization; Matplotlib is sufficient).
 
+Builder-only dependencies are acceptable: use SciPy's `cKDTree` where useful for
+candidate spacing, coverage scoring, or deduplication. Install these separately
+with `pip install -e '.[builder]'`. Export only portable records, coordinates, and
+metadata; do not serialize SciPy trees or require SciPy in deployed lookup code.
+
 Avoid overconcentration in Europe, east Asia, and the northeastern U.S. while also avoiding overrepresentation of arbitrary nearly uninhabited points. Treat administrative boundary areas and coastlines as ambiguous unless true boundary data is added later.
 
 ### Packaging and compression
@@ -98,11 +108,12 @@ Try two approaches and measure both:
 - **Preferred for maintainability:** ship a compressed binary resource (e.g. `.gz` or `.npz`) with the Python package.
 - **Optional single-file distribution:** embed `gzip` + Base64 data into a Python module, decoded on first use.
 
-A compact, versioned format with scaled integer coordinates (e.g. 1e-4 degrees), indexed/shared strings, feature-class IDs, and optional population/significance is appropriate. Measure actual compressed size; avoid making a complicated custom format without demonstrable value. Preserve Unicode names and attribution metadata. Decode/load **once**, not for every lookup. Avoid runtime dependencies beyond NumPy/SciPy and the standard library.
+A compact, versioned format with scaled integer coordinates (e.g. 1e-4 degrees), indexed/shared strings, feature-class IDs, and optional population/significance is appropriate. Measure actual compressed size; avoid making a complicated custom format without demonstrable value. Preserve Unicode names and attribution metadata. Decode/load **once**, not for every lookup. Runtime dependencies are limited to NumPy and the standard library; builder dependencies stay outside deployed bundles.
 
 ## Runtime lookup design
 
-Use a spherical spatial index (preferably `scipy.spatial.cKDTree` built on 3D unit-sphere Cartesian coordinates) to handle the antimeridian and poles cleanly:
+Cache 3D unit-sphere Cartesian coordinates, then scan them with NumPy to handle
+the antimeridian and poles cleanly:
 
 ```python
 lat_r = np.deg2rad(lat)
@@ -114,9 +125,21 @@ xyz = np.column_stack((
 ))
 ```
 
-Nearest-neighbor ranking on the unit sphere uses chord distance and is equivalent to great-circle distance ordering. Convert candidate results to great-circle distances in km and calculate initial bearings (0–360 degrees clockwise from north) for presentation. Use a consistent mean Earth radius (e.g. 6371.0088 km); document that this is a spherical approximation, not an ellipsoidal geodesic.
+Rank by squared chord distance computed from direct vector differences; this
+preserves close-point distinctions better than subtracting a dot product from 1.
+Chord ranking is equivalent to great-circle distance ordering. Each query scans
+the eligible references (O(M)); at approximately 10,000 points and below 10 Hz,
+measure this simple approach before considering additional runtime indexing.
+Process batches in bounded chunks rather than allocating an N×M distance array
+for the entire track. Convert selected results to great-circle distances in km
+and calculate initial bearings (0–360 degrees clockwise from north). Use a
+consistent mean Earth radius (e.g. 6371.0088 km); document that this is a spherical
+approximation, not an ellipsoidal geodesic.
 
-Support feature filters (e.g. settlement-only, landmark-only, or any) and nearest-*k* results. Important: filtering should occur **before or within indexed querying** as appropriate, not by retrieving an insufficient fixed number of unfiltered neighbors. Separate indexes by broad feature group are acceptable.
+Support feature filters (e.g. settlement-only, landmark-only, or any) and nearest-*k*
+results. Filter the candidate set before selecting neighbors; cache feature subsets.
+Use NumPy minimum/partial selection and sort only selected neighbors. Do not
+retrieve an insufficient fixed number of unfiltered neighbors and filter afterward.
 
 Potential public API (refine if needed):
 
@@ -179,7 +202,7 @@ Optional: generate a map of selected locations and a geographic error/coverage h
 
 ## Acceptance criteria for v1
 
-- Runtime operates fully offline, using only NumPy, SciPy, and Python standard library.
+- Runtime operates fully offline on Python >=3.10, using only NumPy and the Python standard library. SciPy is allowed only in separately installed database-building tools.
 - Reproducibly builds a gazetteer of approximately 10,000 distinct useful records with clear license/source attribution.
 - Provides `locate` and `locate_many` with class-specific nearest references, distance and bearing; `describe_track` has basic transition suppression.
 - Correct for antimeridian and polar test cases, with explicit validation rules for coordinates and altitude handling.
@@ -197,26 +220,23 @@ supported functionality or an additional gate for desktop v1.
 
 Pythonista's official documentation, checked **2026-10-31**, advertises Python 3.10,
 bundled NumPy, and an iOS `location` module. SciPy is not listed in the bundled
-third-party modules, so the release should not depend on it. Confirm actual
-versions/imports on the target device before setting the support matrix. The
-current TinyGeo package requires Python >=3.11 and imports SciPy directly; it
-will need a compatibility/backend change before this bundle can work.
+third-party modules, so the release does not depend on it. The core now targets
+Python >=3.10 and NumPy >=1.21.6, with no SciPy runtime dependency. Confirm actual
+versions/imports and resource loading on the target device before claiming
+verified Pythonista support; desktop Python 3.10 tests alone are insufficient.
 
-Recommend **one shared database, with a portable lookup backend**, rather than a
-separate hand-maintained Python database:
+Use **one shared database and a NumPy lookup backend** across desktop and iOS:
 
 - [ ] Build a versioned gzip-compressed UTF-8 JSON resource, readable with the
   standard library, from the same selected records and source manifest used by
   desktop TinyGeo. Preserve Unicode, source IDs, licenses, and attribution.
-- [ ] Add a shared standard-library backend using cached unit-sphere vectors and
-  a linear nearest-*k* scan with feature filtering. Benchmark approximately 10,000
-  records on-device before adding a more complicated index. Use bundled NumPy
-  optionally for vectorized scans; retain SciPy acceleration on desktop.
-- [ ] Keep matching semantics, validation, distances, bearings, and description
-  rules consistent across backends; test their agreement. Avoid importing SciPy
-  or NumPy on the standard-library path. Make the portable code and packaging
-  compatible with the verified Pythonista interpreter without duplicating the
-  library into a separate implementation.
+- [x] Replace runtime SciPy indexing with a shared NumPy nearest-*k* scan over
+  cached unit-sphere vectors and filtered subsets, with bounded batch chunks.
+- [x] Target Python 3.10 and retain matching semantics, validation, distances,
+  bearings, and qualified descriptions in the shared library.
+- [ ] Run the supplied smoke test and benchmark approximately 10,000 references
+  on a physical Pythonista device. A standard-library-only fallback remains
+  optional if a future target cannot import NumPy.
 - [ ] Produce a downloadable ZIP containing the importable library, compressed
   data, launcher script, attribution, version/checksum manifest, and copy/run
   instructions. Require no package installation, downloads, or network at runtime.
@@ -268,6 +288,6 @@ References: [Pythonista platform capabilities](https://omz-software.com/pythonis
 4. Add track transition logic, edge-case tests, and benchmark scripts.
 5. Compare to `reverse_geocoder` and generate a short evaluation report; tune selection and wording where results are weak.
 6. Optionally implement the embedded Base64 single-file build as a release artifact.
-7. Build and validate the Pythonista/iOS companion and portable lookup backend described in the future release TODO.
+7. Build and validate the Pythonista/iOS companion using the shared NumPy runtime described in the future release TODO.
 
 Keep the implementation lean. Prefer working code, measurable geographic quality, and clear limitations to speculative features. If a requirement is ambiguous, choose a documented sensible default and proceed.

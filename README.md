@@ -5,12 +5,14 @@ for the full project design and acceptance criteria.
 
 **Status: first runtime milestone. The bundled six-point dataset is entirely
 synthetic and is useful only for exercising the API. Real geographic coverage,
-the reproducible GeoNames builder, track summaries, and benchmarks are pending.**
+the reproducible GeoNames builder, track summaries, and full geographic evaluation
+are pending.**
 Every bundled lookup marks its dataset as synthetic and labels its description.
 
 ## Development
 
-Python 3.11 or newer is required. The initial development environment uses 3.13.
+Python 3.10 or newer and NumPy >=1.21.6 are required. Development checks cover
+Python 3.10 and 3.13. SciPy is not needed for runtime lookup.
 
 ```sh
 python3.13 -m venv .venv
@@ -21,7 +23,15 @@ python examples/demo.py
 ```
 
 Installing dependencies needs network access or locally available wheels. Runtime
-queries use only local package resources, NumPy, SciPy, and the standard library.
+queries use only local package resources, NumPy, and the standard library.
+
+Database-building tools may use SciPy for selection and coverage analysis; install
+that separate extra with `python -m pip install -e '.[builder]'`. Deployed bundles
+contain portable point data and do not need SciPy or a serialized spatial tree.
+
+For Pythonista copy/run instructions and the on-device smoke test, see
+[docs/pythonista.md](docs/pythonista.md). Pythonista's official documentation lists
+Python 3.10 and bundled NumPy; actual device verification is still pending.
 
 ## Playground notebook
 
@@ -67,7 +77,7 @@ Country and region fields describe the reference point, never query containment.
   automatically normalized. Any invalid sample rejects the entire batch.
   Empty batches must have an explicit `(0, 2)` or `(0, 3)` array shape.
 - `k` is a positive integer, capped at the eligible record count. Feature filters
-  select indexes before querying. Empty or unmatched filters return no selected
+  restrict candidates before nearest-neighbor selection. Empty or unmatched filters return no selected
   neighbors; class-specific results remain available independently of the filter.
 - Types: `city`, `town`, `remote_settlement`, `landmark`, `mountain`, `lake`,
   `island`, `other`. Settlement means the first three; landmark means exactly
@@ -79,9 +89,12 @@ Country and region fields describe the reference point, never query containment.
 - `nearby_reference` means within 25 km; otherwise `distant_reference`.
   This is a proximity label, not a geographic accuracy guarantee. No matching
   references produces `no_reference`. Ocean/country membership is not inferred.
-- The default dataset loads once; feature-specific spherical cKDTree indexes are
-  cached. Batch neighbor searches are vectorized; dictionary formatting currently
-  runs per sample. Performance has not yet been benchmarked.
+- The default dataset loads once; unit-sphere vectors and feature subsets are
+  cached. NumPy scans all eligible references using squared chord distance;
+  nearest-*k* results use partial selection. Batch scans use bounded chunks and
+  dictionary formatting runs per sample. This favors simple deployment and device
+  update rates below 10 Hz. See [the timing notes](docs/performance.md) for measured
+  desktop results and a reproducible 10,000-reference benchmark.
 
 ## Next milestones
 
@@ -93,7 +106,7 @@ Country and region fields describe the reference point, never query containment.
    nearest-settlement comparisons.
 5. [Pythonista/iOS release](PROJECT.md#future-release-todo-pythonista--ios-track-companion)
    with device-location tracking, nearby/passed reference history, and constant-motion
-   projections at 15 minutes, 1 hour, and 2 hours; portable backend and on-device
+   projections at 15 minutes, 1 hour, and 2 hours; portable packaging and on-device
    compatibility checks planned.
 
 ## Git and attribution
