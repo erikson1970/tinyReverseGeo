@@ -79,6 +79,8 @@ Country and region fields describe the reference point, never query containment.
 
 ## Git and attribution
 
-Development uses local `main`; the remote will be attached when provided.
+Development uses local `main`, synchronized with
+[`erikson1970/tinyReverseGeo`](https://github.com/erikson1970/tinyReverseGeo).
 Deploy keys and downloaded source inputs are excluded from version control.
-See [LICENSES.md](LICENSES.md). A project source-code license is not yet selected.
+Source code is licensed under [Apache 2.0](LICENSE). See [LICENSES.md](LICENSES.md)
+for data provenance and attribution.

@@ -10,4 +10,5 @@ access date, snapshot/checksum, applicable license, and required attribution.
 GeoNames is the intended primary source; its exact downloaded sources and license
 terms still need verification when that milestone starts.
 
-A license for the project's source code has not yet been selected by the owner.
+The project's source code is licensed under Apache License 2.0; see [LICENSE](LICENSE).
+External geographic data will retain its own source-specific license and attribution.
