@@ -203,3 +203,23 @@ the expected dataset `tinygeo-c5f36386a63bde416304` and 10,000 records. Its runt
 path identified the new extraction folder. This confirms the launcher recovery
 for the reported device case; the live UI/GPS and other iOS behavior still need
 field testing.
+
+## D012 — Persist checkpoints for the live-device exit
+
+The UI runs and records fixes on the phone, but continued capture returns to the
+Home Screen without a visible traceback. Treat a native failure or OS termination
+as a possibility, not an established diagnosis. Do not attribute this to zero
+velocity without evidence: the motion code guards stationary normalization and
+its stationary replay tests pass.
+
+Add flushed JSONL checkpoints before/after location, lookup, motion, rendering,
+and scheduling operations; record thread and runtime configuration. Persist Python
+tracebacks independently of whether poll cleanup closed the journal. Protect UI
+error rendering from recursion and preserve original failures during cleanup.
+Attempt optional native-fault capture without replacing an existing handler;
+forced OS termination can still leave no traceback. A motion on/off flag permits
+an isolated comparison. Supply a standalone pasteable launcher with the prior
+import bootstrap, leaving the phone's library/database and tested ZIP untouched.
+
+Revisit once the device supplies its last checkpoints or a native fault report.
+This is instrumentation and error containment, not a verified fix for the exit.

@@ -2,12 +2,14 @@
 
 The shared NumPy-only runtime now supports desktop replay and a foreground
 Pythonista companion prototype. Its acquisition/controller is tested with a
-simulated provider. **The new iOS UI has not been exercised on a physical device.**
+simulated provider. **The live iOS trial is in progress; an unexpected exit is
+being investigated (see below).**
 On 2026-10-31 the user reported a successful Pythonista smoke test of the real
 10,000-record dataset `tinygeo-c5f36386a63bde416304`, after the launcher import fix.
 That test covered package/data loading, fuzzy lookup, batch/polar/dateline cases,
-and basic track-summary/stationary-forecast assertions. Live location acquisition,
-the foreground UI, and measured device performance remain to be checked. The
+and basic track-summary/stationary-forecast assertions. Initial live capture/UI
+operation is reported, but sustained recording and measured performance remain
+to be verified. The
 printed Boston result uses the smoke test's fixed coordinates, not a device fix.
 
 ## Pythonista quick start
@@ -151,3 +153,44 @@ metadata, fixes, explicit acquisition gaps, and final event summary make that
 comparison inspectable. The database remains the existing compressed JSON format;
 JSON Lines is sufficient for append-only track capture and is portable to
 Pythonista. A separate pure-Python database package is unnecessary at this scale.
+
+## Device exit investigation (2026-10-31)
+
+The user subsequently ran the foreground UI on iPhone. Start produces position
+reports and an initial lookup; quick Start/Stop and local CSV/JSONL output work,
+but continued recording returns to the iPhone Home Screen after a few updates.
+No Python traceback was visible. The preserved editor state does not establish
+whether the process survived or restored state after termination. The cause is
+unknown; zero speed is explicitly handled and stationary replay tests pass.
+
+For this investigation, replace only the phone's `pythonista_track.py` with the
+contents of `dist/pythonista_track_debug.py`, in the existing extracted folder.
+The standalone diagnostic script includes the adjacent-runtime import fix and
+uses the existing library/database. No new ZIP or data transfer is required.
+Its source is maintained in `examples/pythonista_track.py`; build the standalone
+file with `tools.launcher.wrap_launcher` when updating it.
+
+The diagnostic version writes flushed `diagnostic` checkpoints to each session's
+JSONL journal around location reads, track/lookup calls, motion estimation and
+projection, UI text rendering, and timer scheduling. Records include sequence,
+thread ID, fix data, motion state, and Python/NumPy configuration. Replay and CSV
+export ignore diagnostic/error rows. Python exceptions include full tracebacks
+in the journal and `track_history/errors.log`, including failures after the
+normal journal handle has closed. A render failure uses a simple error view
+instead of recursively calling the failing renderer. Cleanup errors are logged
+without hiding the original polling failure.
+
+The script attempts optional native fault capture in `native-fault.log`, keeping
+the stream open until its own handler is disabled. It leaves an existing handler's
+destination unchanged and logs that fact. Availability depends on the interpreter;
+a forced iOS kill cannot execute a Python handler. A log with no exception may
+therefore still have useful last-started/last-completed checkpoints, but those
+checkpoints do not prove the cause. See the
+[Python fault-handler documentation](https://docs.python.org/3.10/library/faulthandler.html).
+
+First reproduce with `ENABLE_MOTION = True`. If it exits, retain that journal and
+try `ENABLE_MOTION = False` near the top of the diagnostic script. That keeps
+capture, lookup, UI, and CSV working while bypassing the moving/stationary fit and
+forecasts. Compare the last checkpoints and retain any `errors.log` or native
+fault output. `DIAGNOSTICS = False` disables routine checkpoint volume after the
+investigation; exception logging remains available.

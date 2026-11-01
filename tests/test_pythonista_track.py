@@ -43,9 +43,9 @@ def test_lifecycle_duplicate_stale_forecast_and_csv_replay(session):
         provider.fix = fix(stamp, horizontal_accuracy=5, altitude=17)
         assert s.poll()
     assert s.motion['status'] == 'stationary' and len(s.forecasts) == 3
-    lines = s.path.read_text().splitlines()
+    fixes = [e for e in companion.history_entries(s.path) if e['type'] == 'fix']
     assert not s.poll()  # Same fix does not append a duplicate.
-    assert s.path.read_text().splitlines() == lines
+    assert [e for e in companion.history_entries(s.path) if e['type'] == 'fix'] == fixes
     provider.fix = fix(110)  # Out-of-order provider data is ignored.
     assert not s.poll()
     clock[0] = 200
@@ -124,3 +124,123 @@ def test_restart_uses_new_journal_and_replay_checks_dataset(session):
     assert companion.replay_history(old, gazetteer=s.db)
     with old.open('a') as stream: stream.write('\n')
     with pytest.raises(json.JSONDecodeError): companion.replay_history(old, gazetteer=s.db)
+
+
+def test_diagnostics_capture_stationary_motion_and_original_exception(session):
+    s, provider, clock = session
+    s.start()
+    for stamp in (100, 110, 120):
+        clock[0] = stamp
+        provider.fix = fix(stamp)
+        s.poll()
+    events = list(companion.history_entries(s.path))
+    estimates = [e for e in events if e.get('stage') == 'motion.estimate.end']
+    assert estimates[-1]['details']['motion']['speed_m_s'] == 0
+    assert estimates[-1]['details']['motion']['status'] == 'stationary'
+    assert any(e.get('stage') == 'motion.project.end' and e['details']['forecast_count'] == 3 for e in events)
+    def fail(): raise ZeroDivisionError('simulated device failure')
+    provider.get_location = fail
+    with pytest.raises(ZeroDivisionError, match='simulated device failure'): s.poll()
+    errors = [e for e in companion.history_entries(s.path) if e['type'] == 'error']
+    assert errors[-1]['stage'] == 'location.get.begin'
+    assert 'ZeroDivisionError' in errors[-1]['traceback']
+    assert 'fail' in errors[-1]['traceback']
+    persisted = [json.loads(line) for line in (s.directory/'errors.log').read_text().splitlines()]
+    assert persisted[-1]['message'] == 'simulated device failure'
+    assert s._journal is None and not s.running
+
+
+def test_diagnostics_are_json_safe_and_motion_can_be_disabled(session):
+    s, provider, clock = session
+    s.motion_enabled = False
+    s.start()
+    provider.fix = fix(100, latitude=float('nan'))
+    assert not s.poll()
+    for stamp in (101, 111, 121):
+        clock[0] = stamp
+        provider.fix = fix(stamp)
+        assert s.poll()
+    assert s.forecasts == []
+    events = list(companion.history_entries(s.path))
+    assert any(e.get('stage') == 'motion.disabled' for e in events)
+    assert not any(e.get('stage') == 'motion.estimate.begin' for e in events)
+    raw = next(e for e in events if e.get('stage') == 'location.get.end')
+    assert raw['details']['raw_fix']['latitude'] == 'nan'
+    s.stop()
+
+
+def test_cleanup_error_does_not_hide_the_original_failure(session):
+    s, provider, _ = session
+    s.start()
+    def read_fail(): raise ValueError('original read failure')
+    def stop_fail(): raise RuntimeError('cleanup failure')
+    provider.get_location, provider.stop_updates = read_fail, stop_fail
+    with pytest.raises(ValueError, match='original read failure'): s.poll()
+    assert s._journal is None
+    records = [e for e in companion.history_entries(s.path) if e['type'] == 'error']
+    assert [e['message'] for e in records] == ['original read failure', 'cleanup failure']
+
+
+@pytest.mark.parametrize('failure', ['formatting', 'text_update', 'timer'])
+def test_ui_failure_is_persisted_and_stops_cleanly(session, monkeypatch, failure):
+    import types
+    s, provider, _ = session
+    provider.fix = fix(100)
+    views = []
+    class View:
+        def __init_subclass__(cls): pass
+        def add_subview(self, v): pass
+        def present(self, *a): views.append(self)
+        def wait_modal(self): self.start(None)
+    class Button:
+        def __init__(self, title): self.title = title
+    class Text:
+        @property
+        def text(self): return getattr(self, '_text', '')
+        @text.setter
+        def text(self, value):
+            if failure == 'text_update' and value.startswith('Recording in foreground'):
+                raise RuntimeError('simulated native text setter exception')
+            self._text = value
+    def delay(callback, seconds):
+        if failure == 'timer': raise RuntimeError('simulated timer exception')
+        raise AssertionError('An earlier formatting/text error should prevent scheduling')
+    original_display = companion._display
+    def display(current):
+        if failure == 'formatting' and current.last_fix:
+            raise RuntimeError('simulated formatting exception')
+        return original_display(current)
+    monkeypatch.setitem(__import__('sys').modules, 'ui', types.SimpleNamespace(View=View, Button=Button, TextView=Text, delay=delay))
+    monkeypatch.setitem(__import__('sys').modules, 'location', provider)
+    monkeypatch.setattr(companion, 'TrackSession', lambda *a, **k: s)
+    monkeypatch.setattr(companion, '_display', display)
+    monkeypatch.setattr(companion, 'CAPTURE_NATIVE_FAULTS', False)
+    companion.main()
+    assert not s.running and provider.stops == 1
+    assert 'Stopped after RuntimeError' in views[0].text.text
+    assert views[0].buttons[0].enabled
+    errors = [e for e in companion.history_entries(s.path) if e['type'] == 'error']
+    assert errors[-1]['stage'] == ('ui.tick' if failure == 'timer' else 'ui.render')
+    assert 'simulated' in errors[-1]['traceback']
+    assert (s.directory/'errors.log').exists()
+
+
+@pytest.mark.parametrize('existing', [True, False])
+def test_native_fault_stream_lifetime_and_existing_handler(tmp_path, monkeypatch, existing):
+    import types
+    state = {'enabled': existing, 'enable_calls': 0, 'disable_calls': 0, 'stream': None}
+    def enable(*, file, all_threads):
+        assert not file.closed and all_threads
+        state.update(enabled=True, enable_calls=state['enable_calls']+1, stream=file)
+    def disable():
+        assert not state['stream'].closed
+        state.update(enabled=False, disable_calls=state['disable_calls']+1)
+    fake = types.SimpleNamespace(is_enabled=lambda: state['enabled'], enable=enable, disable=disable)
+    monkeypatch.setitem(__import__('sys').modules, 'faulthandler', fake)
+    monkeypatch.setattr(companion, 'CAPTURE_NATIVE_FAULTS', True)
+    with companion._native_fault_logging(tmp_path):
+        if not existing: assert state['stream'] is not None and not state['stream'].closed
+    assert state['enable_calls'] == (0 if existing else 1)
+    assert state['disable_calls'] == (0 if existing else 1)
+    if not existing: assert state['stream'].closed
+    assert state['enabled'] is existing

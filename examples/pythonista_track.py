@@ -5,23 +5,46 @@ Only main() imports iOS location/ui. No platform reverse-geocoding or map downlo
 """
 
 from collections import deque
+from contextlib import contextmanager
 import csv
 from datetime import datetime, timezone
 import json
 import math
 from numbers import Real
 from pathlib import Path
+import sys
+import threading
 import time
+import traceback
 from uuid import uuid4
 
+import numpy as np
 from tinygeo import TrackTracker, estimate_motion, project_motion
+
+# Diagnostic device trial: set ENABLE_MOTION=False to isolate lookup/UI capture.
+DIAGNOSTICS = True
+ENABLE_MOTION = True
+CAPTURE_NATIVE_FAULTS = True
+
+
+def _safe_log_value(value):
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, Real):
+        return float(value) if math.isfinite(value) else repr(value)
+    if isinstance(value, dict):
+        return {str(k): _safe_log_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_safe_log_value(v) for v in value]
+    return repr(value)[:4000]
 
 
 class TrackSession:
     """Provider-independent foreground acquisition, persistence, and forecasts."""
 
     def __init__(self, provider, directory, *, gazetteer=None, clock=time.time,
-                 max_accuracy_m=200, max_fix_age_seconds=30, track_options=None, motion_options=None):
+                 max_accuracy_m=200, max_fix_age_seconds=30, track_options=None, motion_options=None,
+                 diagnostics=True, motion_enabled=True):
         self.provider, self.directory, self.clock = provider, Path(directory), clock
         if any(not isinstance(v, Real) or isinstance(v, bool) or not math.isfinite(v) or v <= 0
                for v in (max_accuracy_m, max_fix_age_seconds)):
@@ -36,6 +59,46 @@ class TrackSession:
         self.last_seen = self.last_fix = self.current = self.annotation = None
         self.motion, self.forecasts = estimate_motion([], []), []
         self.status, self._last_rejection = 'Stopped', None
+        self.diagnostics, self.motion_enabled = diagnostics, motion_enabled
+        self._sequence, self._phase, self.last_error = 0, 'created', None
+
+    def diagnostic(self, stage, **details):
+        """Flush checkpoints; logging failures must not create an app failure."""
+        self._phase = stage
+        self._sequence += 1
+        if not self.diagnostics or self._journal is None or self._journal.closed:
+            return
+        try:
+            self._write({'type': 'diagnostic', 'stage': stage, 'recorded_at': self.clock(),
+                         'sequence': self._sequence, 'thread_id': threading.get_ident(),
+                         'recent_count': len(self.recent), 'details': _safe_log_value(details)})
+        except Exception as exc:
+            print('TinyGeo diagnostic write failed:', repr(exc))
+
+    def capture_error(self, stage, exc):
+        """Persist Python tracebacks even after poll cleanup closed the journal."""
+        record = {'type': 'error', 'stage': stage, 'recorded_at': self.clock(),
+                  'exception_type': type(exc).__name__, 'message': str(exc),
+                  'traceback': ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
+                  'last_checkpoint': self._phase, 'thread_id': threading.get_ident()}
+        self.last_error = record
+        try:
+            self.directory.mkdir(parents=True, exist_ok=True)
+            with (self.directory/'errors.log').open('a', encoding='utf-8') as stream:
+                stream.write(json.dumps(record, ensure_ascii=False, allow_nan=False)+'\n')
+                stream.flush()
+        except Exception as logging_error:
+            print('TinyGeo error-log write failed:', repr(logging_error))
+        try:
+            if self._journal is not None and not self._journal.closed:
+                self._write(record)
+            elif self.path is not None:
+                with self.path.open('a', encoding='utf-8') as stream:
+                    stream.write(json.dumps(record, ensure_ascii=False, allow_nan=False)+'\n')
+                    stream.flush()
+        except Exception as logging_error:
+            print('TinyGeo journal error write failed:', repr(logging_error))
+        print(record['traceback'])
 
     def _write(self, entry):
         self._journal.write(json.dumps(entry, ensure_ascii=False, allow_nan=False)+'\n')
@@ -54,16 +117,27 @@ class TrackSession:
             self.recent.clear()
             self.last_seen = self.last_fix = self.current = self.annotation = None
             self._last_rejection = None
+            self.last_error = None
             self.motion, self.forecasts = estimate_motion([], []), []
             self._write({'type': 'metadata', 'format_version': 1, 'created_at': self.clock(),
                          'dataset_id': self.db.dataset_id, 'synthetic': self.db.synthetic,
-                         'track_options': self.track_options, 'motion_options': self.motion_options})
+                         'track_options': self.track_options, 'motion_options': self.motion_options,
+                         'python': sys.version, 'numpy': np.__version__, 'numpy_error_policy': np.geterr(),
+                         'runtime_file': getattr(sys.modules.get('tinygeo'), '__file__', None),
+                         'diagnostics': self.diagnostics, 'motion_enabled': self.motion_enabled,
+                         'main_state': getattr(self, 'main_state', 'controller-only'),
+                         'native_fault_capture_requested': CAPTURE_NATIVE_FAULTS})
+            self.diagnostic('start.ready')
             self.running, self.status = True, 'Waiting for location permission and a fresh fix'
-        except Exception:
+        except Exception as exc:
+            self.capture_error('start', exc)
             if self._journal is not None:
                 self._journal.close()
                 self._journal = None
-            self.provider.stop_updates()
+            try:
+                self.provider.stop_updates()
+            except Exception as cleanup_error:
+                self.capture_error('start.cleanup', cleanup_error)
             raise
 
     def stop(self):
@@ -71,11 +145,14 @@ class TrackSession:
             return
         self.running = False
         try:
+            self.diagnostic('stop.provider.begin')
             self.provider.stop_updates()
+            self.diagnostic('stop.provider.end')
         finally:
             try:
                 self._write({'type': 'summary', 'recorded_at': self.clock(),
                              'events': self.tracker.snapshot()})
+                self.diagnostic('stop.journal.close')
             finally:
                 self._journal.close()
                 self._journal = None
@@ -83,6 +160,7 @@ class TrackSession:
                 self.forecasts = []
 
     def _reject(self, reason):
+        self.diagnostic('fix.rejected', reason=reason)
         self.status = reason
         if reason != self._last_rejection:
             self.tracker.break_track(reason)
@@ -92,17 +170,27 @@ class TrackSession:
         self.motion, self.forecasts = estimate_motion([], []), []
 
     def _refresh_motion(self):
+        if not self.motion_enabled:
+            self.motion, self.forecasts = estimate_motion([], []), []
+            self.diagnostic('motion.disabled')
+            return
+        self.diagnostic('motion.estimate.begin', timestamps=[f['timestamp'] for f in self.recent])
         self.motion = estimate_motion([f['position'] for f in self.recent],
                                       [f['timestamp'] for f in self.recent],
                                       now=self.clock(), **self.motion_options)
+        self.diagnostic('motion.estimate.end', motion=self.motion)
+        self.diagnostic('motion.project.begin')
         self.forecasts = project_motion(self.motion, gazetteer=self.db)
+        self.diagnostic('motion.project.end', forecast_count=len(self.forecasts))
 
     def poll(self):
         """Consume at most one new fix; stale/duplicate/out-of-order fixes never append."""
         if not self.running:
             return False
         try:
+            self.diagnostic('location.get.begin')
             fix = self.provider.get_location()
+            self.diagnostic('location.get.end', raw_fix=fix)
             if fix is None:
                 self._reject('No fix: waiting for permission or a location update')
                 return False
@@ -115,6 +203,7 @@ class TrackSession:
                 return False
             stamp = float(stamp)
             if self.last_seen is not None and stamp <= self.last_seen:
+                self.diagnostic('fix.duplicate_or_old', timestamp=stamp, previous=self.last_seen)
                 self._refresh_motion()
                 if self.motion['status'] == 'stale': self._reject('Latest fix is stale; forecasts paused')
                 return False
@@ -143,8 +232,12 @@ class TrackSession:
             if isinstance(altitude, Real) and not isinstance(altitude, bool) and math.isfinite(altitude):
                 normalized['altitude'] = float(altitude)
             self.last_seen = stamp
+            self.diagnostic('track.update.begin')
             self.annotation = self.tracker.update(position, stamp)
+            self.diagnostic('track.update.end')
+            self.diagnostic('lookup.begin')
             self.current = self.db.locate(*position, k=3)
+            self.diagnostic('lookup.end')
             self.last_fix, self._last_rejection = normalized, None
             self.recent.append({'position': position, 'timestamp': stamp})
             self._refresh_motion()
@@ -153,9 +246,14 @@ class TrackSession:
                          'context_name': self.annotation['context']['name'],
                          'context_kind': self.annotation['context_kind']})
             self.status = 'Recording in foreground'
+            self.diagnostic('poll.end')
             return True
-        except Exception:
-            self.stop()
+        except Exception as exc:
+            self.capture_error(self._phase, exc)
+            try:
+                self.stop()
+            except Exception as cleanup_error:
+                self.capture_error('poll.cleanup', cleanup_error)
             raise
 
 
@@ -236,6 +334,40 @@ def _display(session):
     return '\n'.join(lines)
 
 
+@contextmanager
+def _native_fault_logging(directory):
+    """Best-effort native stacks; an iOS SIGKILL cannot run a fault handler."""
+    stream, owned = None, False
+    try:
+        if CAPTURE_NATIVE_FAULTS:
+            import faulthandler
+            directory.mkdir(parents=True, exist_ok=True)
+            stream = (directory/'native-fault.log').open('a', encoding='utf-8')
+            stream.write('\nDiagnostic launch: '+datetime.now(timezone.utc).isoformat()+'\n')
+            if faulthandler.is_enabled():
+                stream.write('An existing fault handler is enabled; leaving its destination unchanged.\n')
+            else:
+                faulthandler.enable(file=stream, all_threads=True)
+                owned = True
+                stream.write('Native fault capture enabled for this run.\n')
+            stream.flush()
+    except Exception as exc:
+        print('Native fault capture unavailable:', repr(exc))
+        if stream is not None:
+            try:
+                stream.write('Native fault capture unavailable: '+repr(exc)+'\n')
+                stream.flush()
+            except Exception:
+                pass
+    try:
+        yield
+    finally:
+        if owned:
+            faulthandler.disable()
+        if stream is not None:
+            stream.close()
+
+
 def main():
     import location
     import ui
@@ -243,7 +375,8 @@ def main():
     class Companion(ui.View):
         def __init__(self):
             self.name, self.background_color = 'TinyGeo track', 'white'
-            self.session = TrackSession(location, Path(__file__).resolve().parent/'track_history')
+            self.session = TrackSession(location, Path(__file__).resolve().parent/'track_history',
+                                        diagnostics=DIAGNOSTICS, motion_enabled=ENABLE_MOTION)
             self.generation, self.closed = 0, False
             self.buttons = []
             for title, action in [('Start', self.start), ('Stop', self.stop), ('Export CSV', self.export)]:
@@ -263,10 +396,37 @@ def main():
             self.text.frame = (8, 60, self.width-16, self.height-68)
 
         def render(self):
-            self.text.text = _display(self.session)
-            self.buttons[0].enabled = not self.session.running
-            self.buttons[1].enabled = self.session.running
-            self.buttons[2].enabled = self.session.path is not None
+            try:
+                self.session.diagnostic('ui.display.begin')
+                text = _display(self.session)
+                self.session.diagnostic('ui.display.end', character_count=len(text))
+                self.session.diagnostic('ui.text.begin')
+                self.text.text = text
+                self.session.diagnostic('ui.text.end')
+                self.buttons[0].enabled = not self.session.running
+                self.buttons[1].enabled = self.session.running
+                self.buttons[2].enabled = self.session.path is not None
+                self.session.diagnostic('ui.render.end')
+                return True
+            except Exception as exc:
+                self.fail('ui.render', exc)
+                return False
+
+        def fail(self, stage, exc):
+            self.session.capture_error(stage, exc)
+            self.generation += 1
+            try:
+                self.session.stop()
+            except Exception as cleanup_error:
+                self.session.capture_error('ui.cleanup', cleanup_error)
+            self.session.status = f'Stopped after {type(exc).__name__}: {exc}'
+            # Do not call render again: the failure may be in its formatting.
+            try:
+                self.text.text = self.session.status+'\nSee track_history/errors.log and the JSONL journal.'
+                self.buttons[0].enabled, self.buttons[1].enabled = True, False
+                self.buttons[2].enabled = self.session.path is not None
+            except Exception as display_error:
+                self.session.capture_error('ui.error_display', display_error)
 
         def start(self, sender):
             try:
@@ -274,23 +434,29 @@ def main():
                 self.generation += 1
                 self.tick(self.generation)
             except Exception as exc:
-                self.session.status = 'Error: '+str(exc)
-                self.render()
+                self.fail('ui.start', exc)
 
         def tick(self, generation):
             if self.closed or generation != self.generation or not self.session.running: return
             try:
+                self.session.diagnostic('ui.tick.begin', generation=generation)
                 self.session.poll()
+                self.session.diagnostic('ui.poll.end')
+                if not self.render(): return
+                if self.session.running:
+                    self.session.diagnostic('ui.timer.schedule.begin')
+                    ui.delay(lambda: self.tick(generation), 2.0)
+                    self.session.diagnostic('ui.timer.schedule.end')
             except Exception as exc:
-                self.session.status = 'Stopped after error: '+str(exc)
-            self.render()
-            if self.session.running: ui.delay(lambda: self.tick(generation), 2.0)
+                self.fail('ui.tick', exc)
 
         def stop(self, sender=None):
             self.generation += 1
             try:
                 self.session.stop()
-            finally:
+            except Exception as exc:
+                self.fail('ui.stop', exc)
+            else:
                 self.render()
 
         def export(self, sender):
@@ -299,19 +465,35 @@ def main():
                 export_csv(self.session.path, destination)
                 self.session.status = 'Saved '+destination.name+' beside the local journal'
             except Exception as exc:
+                self.session.capture_error('ui.export', exc)
                 self.session.status = 'Export error: '+str(exc)
             self.render()
 
         def will_close(self):
+            self.session.diagnostic('ui.will_close')
             self.closed = True
             self.stop()
 
-    view = Companion()
-    try:
-        view.present('fullscreen')
-        view.wait_modal()
-    finally:
-        view.session.stop()
+    with _native_fault_logging(Path(__file__).resolve().parent/'track_history'):
+        view = Companion()
+        try:
+            view.session.main_state = 'presenting'
+            view.session.diagnostic('main.present.begin')
+            view.present('fullscreen')
+            view.session.main_state = 'waiting'
+            view.session.diagnostic('main.wait.begin')
+            view.wait_modal()
+            view.session.main_state = 'wait-returned'
+            view.session.diagnostic('main.wait.end')
+        except Exception as exc:
+            view.session.capture_error('main.lifecycle', exc)
+            raise
+        finally:
+            view.session.diagnostic('main.cleanup')
+            try:
+                view.session.stop()
+            except Exception as cleanup_error:
+                view.session.capture_error('main.cleanup', cleanup_error)
 
 
 if __name__ == '__main__':
