@@ -18,21 +18,38 @@ It requires Python 3.10+ and NumPy >=1.21.6. The user supplies the external
 is under `src/tinygeo/`; an already installed compatible runtime also works.
 No SciPy, geopy, network, or database rebuild is needed for annotation.
 
+For a pip-based handoff, use the supplied `tinygeo-0.1.0.dev0-py3-none-any.whl`,
+this skill file, and the external database instead of the portable runtime ZIP.
+With NumPy already installed, install the exact local wheel offline:
+
+```sh
+python -m pip install --no-index ./tinygeo-0.1.0.dev0-py3-none-any.whl
+```
+
+If NumPy is absent, supply a NumPy wheel matching the sandbox's Python/OS/CPU
+and use an offline wheel directory via `--find-links`. TinyGeo's wheel is pure
+Python and platform independent; NumPy's wheel is platform specific. Install in
+the same interpreter the execution tool uses. The TinyGeo wheel contains the
+synthetic demo resource; explicitly load the provided geographic database below.
+
 Discover the actual extracted runtime and database paths. Do not assume a fixed
 sandbox directory or install a similarly named package from an online registry.
 If only this Markdown file and a database were supplied, the TinyGeo runtime is
 also needed. Report a missing runtime/NumPy/database and request the missing
 artifact; do not silently fall back to synthetic demo data or online geocoding.
 
-Set `runtime_parent` to the directory containing `tinygeo/` and `database_path`
-to the supplied data file, then use this bootstrap:
+For the portable ZIP, set `runtime_parent` to the directory containing `tinygeo/`.
+For a pip install, leave it unset or set it to None. Set `database_path` to the
+supplied data file, then use this bootstrap:
 
 ```python
 from pathlib import Path
 import hashlib
 import sys
 
-sys.path.insert(0, str(runtime_parent))  # portable bundle: skill_directory / "assets"
+runtime_parent = globals().get("runtime_parent")
+if runtime_parent is not None:
+    sys.path.insert(0, str(runtime_parent))  # portable bundle: skill_directory / "assets"
 from tinygeo import Gazetteer, describe_track
 
 database_path = Path(database_path)

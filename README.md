@@ -95,6 +95,19 @@ and file hashes; it deliberately contains no default database. The sandbox needs
 Python 3.10+ and NumPy. If using the Markdown file alone, also supply the runtime.
 The skill is a project handoff artifact; it does not install itself globally.
 
+For a local pip installation, give the LLM these three files instead:
+
+- `dist/tinygeo-0.1.0.dev0-py3-none-any.whl`
+- Your external `dataset.json.gz`
+- `skills/tinygeo-track-context/SKILL.md`
+
+With Python 3.10+ and NumPy >=1.21.6 already present, install with
+`python -m pip install --no-index ./tinygeo-0.1.0.dev0-py3-none-any.whl`.
+If NumPy is absent, also provide a NumPy wheel matching the target Python/OS/CPU
+and an offline `--find-links` wheel directory. TinyGeo's own wheel is platform
+independent. Always load the external data with `Gazetteer.from_file(...)`;
+the wheel's default resource remains the six-point synthetic demo.
+
 Example request: “Use the attached TinyGeo skill and database to annotate my
 observer route. Use the available satellite/astronomy tools to find above-horizon
 windows along it, and show UTC time, place context, azimuth, elevation, and the
