@@ -120,6 +120,31 @@ Process large series in bounded chunks rather than retaining every full lookup
 result at once. Cache by coordinates where useful. Annotate event start, peak,
 and end positions separately, especially when the observer is moving.
 
+Distance and bearing belong to a **nested reference**, not the outer result.
+After selecting `ns = place["nearest_settlement"]`, read
+`ns["distance_km"]` and `ns["bearing_deg"]`. There is no top-level
+`place["distance_km"]` or `place["bearing_deg"]`; `.get()` at that level silently
+returns None and can falsely suggest missing measurements. For required API keys,
+use direct indexing so a schema mistake is visible. For example:
+
+```python
+place = db.locate(observer_rows[0]["lat_deg"], observer_rows[0]["lon_deg"])
+ns = place["nearest_settlement"]
+if ns is not None:
+    settlement_distance_km = ns["distance_km"]
+    settlement_bearing_deg = ns["bearing_deg"]
+    distance_text = f"{settlement_distance_km:.1f} km"
+    bearing_text = ("undefined bearing" if settlement_bearing_deg is None
+                    else f"{settlement_bearing_deg:.1f}°")
+    settlement_summary = f"{ns['name']} ({ns['country_code']}), {distance_text}, bearing {bearing_text}"
+else:
+    settlement_summary = "No settlement reference in this dataset."
+```
+
+Use the same pattern for `place["nearest"]`, `place["nearest_region"]`, or each
+member of `place["neighbors"]`, keeping each name with its own distances/bearing.
+The general nearest feature can differ from the nearest settlement.
+
 Interpret the fields correctly:
 
 - `nearest_settlement` supplies municipality context with its own country/admin
@@ -130,6 +155,9 @@ Interpret the fields correctly:
   A zero gap is modeled proximity, not a verified physical or political boundary.
 - `bearing_deg` points from the query toward a **surface reference center**. It is
   not the satellite/event azimuth. It can be None for undefined directions.
+  “Reference bears west of the observer” places the observer east of the reference;
+  do not describe the observer as being west of that reference. This is also not
+  the observer's heading/course.
 - Matches are grouped by `feature_id`. Several support circles can represent one
   named feature; do not count them as independent places or merge IDs just because
   names match. Country/admin labels belong to settlements, not the query point.

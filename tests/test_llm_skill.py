@@ -62,6 +62,10 @@ for row,original in zip(annotated,observer_rows):
  assert row['place_context']['nearest_region']['name']=='Test Ocean'
  assert len(row['place_context']['neighbors'])==2  # Circles group by feature ID.
 assert annotated[0]['place_context']['nearest_settlement']['bearing_deg']!=annotated[0]['az_deg']
+assert 5.5 < settlement_distance_km < 5.6
+assert abs(settlement_bearing_deg-270) < 1e-8
+assert 'Harbor Town' in settlement_summary and 'undefined' not in settlement_summary
+assert place['nearest']['feature_type']=='ocean'  # Its distances must not replace the settlement's.
 try: tinygeo.locate(0,0)
 except FileNotFoundError: pass
 else: raise AssertionError('The handoff must not silently include a default database')
