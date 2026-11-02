@@ -125,6 +125,8 @@ class TrackSession:
                          'python': sys.version, 'numpy': np.__version__, 'numpy_error_policy': np.geterr(),
                          'runtime_file': getattr(sys.modules.get('tinygeo'), '__file__', None),
                          'diagnostics': self.diagnostics, 'motion_enabled': self.motion_enabled,
+                         'diagnostic_version': 2,
+                         'ui_scheduler': getattr(self, 'ui_scheduler', 'controller-only'),
                          'main_state': getattr(self, 'main_state', 'controller-only'),
                          'native_fault_capture_requested': CAPTURE_NATIVE_FAULTS})
             self.diagnostic('start.ready')
@@ -377,7 +379,10 @@ def main():
             self.name, self.background_color = 'TinyGeo track', 'white'
             self.session = TrackSession(location, Path(__file__).resolve().parent/'track_history',
                                         diagnostics=DIAGNOSTICS, motion_enabled=ENABLE_MOTION)
+            self.session.ui_scheduler = 'View.update'
             self.generation, self.closed = 0, False
+            self._in_tick = False
+            self.update_interval = 0.0
             self.buttons = []
             for title, action in [('Start', self.start), ('Stop', self.stop), ('Export CSV', self.export)]:
                 button = ui.Button(title=title)
@@ -413,6 +418,7 @@ def main():
                 return False
 
         def fail(self, stage, exc):
+            self.update_interval = 0.0
             self.session.capture_error(stage, exc)
             self.generation += 1
             try:
@@ -429,28 +435,44 @@ def main():
                 self.session.capture_error('ui.error_display', display_error)
 
         def start(self, sender):
+            if self.closed or self.session.running:
+                return
             try:
                 self.session.start()
                 self.generation += 1
+                self.session.diagnostic('ui.update.enable', interval_seconds=2.0)
+                self.update_interval = 2.0
                 self.tick(self.generation)
             except Exception as exc:
                 self.fail('ui.start', exc)
 
+        def update(self):
+            """Use the view-owned periodic callback, without delayed closures."""
+            if self.closed or not self.session.running:
+                return
+            self.session.diagnostic('ui.update.begin', generation=self.generation)
+            self.tick(self.generation)
+            self.session.diagnostic('ui.update.end')
+
         def tick(self, generation):
             if self.closed or generation != self.generation or not self.session.running: return
+            if self._in_tick:
+                self.session.diagnostic('ui.tick.skipped_busy')
+                return
+            self._in_tick = True
             try:
                 self.session.diagnostic('ui.tick.begin', generation=generation)
                 self.session.poll()
                 self.session.diagnostic('ui.poll.end')
-                if not self.render(): return
-                if self.session.running:
-                    self.session.diagnostic('ui.timer.schedule.begin')
-                    ui.delay(lambda: self.tick(generation), 2.0)
-                    self.session.diagnostic('ui.timer.schedule.end')
+                self.render()
             except Exception as exc:
                 self.fail('ui.tick', exc)
+            finally:
+                self._in_tick = False
 
         def stop(self, sender=None):
+            self.update_interval = 0.0
+            self.session.diagnostic('ui.update.disable')
             self.generation += 1
             try:
                 self.session.stop()
@@ -489,6 +511,7 @@ def main():
             view.session.capture_error('main.lifecycle', exc)
             raise
         finally:
+            view.update_interval = 0.0
             view.session.diagnostic('main.cleanup')
             try:
                 view.session.stop()

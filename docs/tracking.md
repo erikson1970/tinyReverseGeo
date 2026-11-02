@@ -194,3 +194,32 @@ capture, lookup, UI, and CSV working while bypassing the moving/stationary fit a
 forecasts. Compare the last checkpoints and retain any `errors.log` or native
 fault output. `DIAGNOSTICS = False` disables routine checkpoint volume after the
 investigation; exception logging remains available.
+
+### Native log finding and scheduler change (2026-11-02)
+
+The supplied `native-fault.log` records a segmentation fault in the delayed
+lambda at line 479 of the earlier diagnostic script. The JSONL journal contains
+three complete capture/lookup/render cycles, followed by the last successful
+`ui.timer.schedule.end`. The fault stack has no next `tick` frame/checkpoint.
+This localizes the observed failure to the delayed-callback boundary, although
+it does not prove the underlying native defect originated there.
+
+All three motion estimates were `insufficient_history`; the third had three
+samples spanning 7.393 seconds, below the ten-second fit threshold. No forecasts
+were generated. The velocity fit and stationary normalization were therefore not
+executing at this failure. Device metadata reports Python 3.10.4 and NumPy 1.22.3.
+The source logs remain in ignored `dist/pythonista_debug/`; private fix coordinates
+are not copied into repository documentation or tests.
+
+The revised standalone script uses the documented `View.update()` callback with
+`update_interval = 2.0`, replacing self-rescheduling `ui.delay` closures. Stop,
+close, error handling, and final cleanup set the interval to zero. Reentrant ticks
+and stale generations are ignored. Diagnostics remain enabled, and new metadata
+identifies `diagnostic_version: 2` / `ui_scheduler: "View.update"`. Keep motion
+enabled for the next comparison. Desktop tests cover repeated updates through
+stationary forecasts, rapid Start/Stop, restart/close, and reentrant callbacks;
+the new scheduler still needs the device retry.
+
+Copy the updated `dist/pythonista_track_debug.py` contents over the phone script;
+the existing library, database, and ZIP do not need replacement.
+Reference: [Pythonista View.update](https://omz-software.com/pythonista/docs-3.4/py3/ios/ui.html#ui.View.update).

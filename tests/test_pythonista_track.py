@@ -181,7 +181,7 @@ def test_cleanup_error_does_not_hide_the_original_failure(session):
     assert [e['message'] for e in records] == ['original read failure', 'cleanup failure']
 
 
-@pytest.mark.parametrize('failure', ['formatting', 'text_update', 'timer'])
+@pytest.mark.parametrize('failure', ['formatting', 'text_update', 'update_enable'])
 def test_ui_failure_is_persisted_and_stops_cleanly(session, monkeypatch, failure):
     import types
     s, provider, _ = session
@@ -189,6 +189,13 @@ def test_ui_failure_is_persisted_and_stops_cleanly(session, monkeypatch, failure
     views = []
     class View:
         def __init_subclass__(cls): pass
+        @property
+        def update_interval(self): return getattr(self, '_interval', 0)
+        @update_interval.setter
+        def update_interval(self, value):
+            if failure == 'update_enable' and value > 0:
+                raise RuntimeError('simulated periodic update exception')
+            self._interval = value
         def add_subview(self, v): pass
         def present(self, *a): views.append(self)
         def wait_modal(self): self.start(None)
@@ -202,15 +209,12 @@ def test_ui_failure_is_persisted_and_stops_cleanly(session, monkeypatch, failure
             if failure == 'text_update' and value.startswith('Recording in foreground'):
                 raise RuntimeError('simulated native text setter exception')
             self._text = value
-    def delay(callback, seconds):
-        if failure == 'timer': raise RuntimeError('simulated timer exception')
-        raise AssertionError('An earlier formatting/text error should prevent scheduling')
     original_display = companion._display
     def display(current):
         if failure == 'formatting' and current.last_fix:
             raise RuntimeError('simulated formatting exception')
         return original_display(current)
-    monkeypatch.setitem(__import__('sys').modules, 'ui', types.SimpleNamespace(View=View, Button=Button, TextView=Text, delay=delay))
+    monkeypatch.setitem(__import__('sys').modules, 'ui', types.SimpleNamespace(View=View, Button=Button, TextView=Text))
     monkeypatch.setitem(__import__('sys').modules, 'location', provider)
     monkeypatch.setattr(companion, 'TrackSession', lambda *a, **k: s)
     monkeypatch.setattr(companion, '_display', display)
@@ -220,7 +224,7 @@ def test_ui_failure_is_persisted_and_stops_cleanly(session, monkeypatch, failure
     assert 'Stopped after RuntimeError' in views[0].text.text
     assert views[0].buttons[0].enabled
     errors = [e for e in companion.history_entries(s.path) if e['type'] == 'error']
-    assert errors[-1]['stage'] == ('ui.tick' if failure == 'timer' else 'ui.render')
+    assert errors[-1]['stage'] == ('ui.start' if failure == 'update_enable' else 'ui.render')
     assert 'simulated' in errors[-1]['traceback']
     assert (s.directory/'errors.log').exists()
 
@@ -244,3 +248,70 @@ def test_native_fault_stream_lifetime_and_existing_handler(tmp_path, monkeypatch
     assert state['disable_calls'] == (0 if existing else 1)
     if not existing: assert state['stream'].closed
     assert state['enabled'] is existing
+
+
+def test_view_owned_updates_stationary_forecasts_restart_and_close(session, monkeypatch):
+    import types
+    s, provider, clock = session
+    provider.fix = fix(100)
+    reads, saved = [], []
+    def get_location():
+        reads.append(provider.fix['timestamp'])
+        return provider.fix
+    provider.get_location = get_location
+    class View:
+        def add_subview(self, view): pass
+        def present(self, *a): pass
+        def wait_modal(self):
+            assert self.update_interval == 0
+            self.start(None)
+            assert self.update_interval == 2.0
+            self.start(None)  # A queued duplicate Start must not poll twice.
+            assert len(reads) == 1
+            for stamp in range(102, 132, 2):
+                clock[0] = stamp; provider.fix = fix(stamp)
+                self.update()
+            assert len(reads) == 16
+            assert s.motion['status'] == 'stationary' and len(s.forecasts) == 3
+            rows = list(companion.history_entries(s.path))
+            assert rows[0]['ui_scheduler'] == 'View.update'
+            assert rows[0]['diagnostic_version'] == 2
+            assert len([r for r in rows if r['type']=='fix']) == 16
+            assert any(r.get('stage')=='ui.update.begin' for r in rows)
+            assert not any(r.get('stage','').startswith('ui.timer.schedule') for r in rows)
+            saved.append(s.path)
+            old_generation = self.generation
+            self.stop(None)
+            assert self.update_interval == 0 and not s.running
+            self.update()  # A late native update after Stop must not acquire a fix.
+            assert len(reads) == 16
+            clock[0] = 140; provider.fix = fix(140)
+            self.start(None)
+            assert s.path != saved[0] and len(reads) == 17
+            self.tick(old_generation)
+            assert len(reads) == 17
+            # Simulate a reentrant update during acquisition: only one read is allowed.
+            def reentrant_read():
+                reads.append(142)
+                self.update()
+                return fix(142)
+            provider.get_location = reentrant_read
+            clock[0] = 142
+            self.update()
+            assert len(reads) == 18
+            assert any(r.get('stage')=='ui.tick.skipped_busy' for r in companion.history_entries(s.path))
+            self.will_close()
+            assert self.update_interval == 0 and self.closed and not s.running
+            self.update(); self.start(None)
+            assert len(reads) == 18
+    class Button:
+        def __init__(self, title): self.title = title
+    class Text: pass
+    # No ui.delay exists in this stub; the former scheduling path cannot be used.
+    monkeypatch.setitem(__import__('sys').modules, 'ui', types.SimpleNamespace(View=View, Button=Button, TextView=Text))
+    monkeypatch.setitem(__import__('sys').modules, 'location', provider)
+    monkeypatch.setattr(companion, 'TrackSession', lambda *a, **k: s)
+    monkeypatch.setattr(companion, 'CAPTURE_NATIVE_FAULTS', False)
+    companion.main()
+    assert provider.starts == 2 and provider.stops == 2
+    assert not [r for r in companion.history_entries(s.path) if r['type']=='error']

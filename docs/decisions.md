@@ -223,3 +223,24 @@ import bootstrap, leaving the phone's library/database and tested ZIP untouched.
 
 Revisit once the device supplies its last checkpoints or a native fault report.
 This is instrumentation and error containment, not a verified fix for the exit.
+
+## D013 — Replace the delayed closure after the native fault report
+
+On 2026-11-02 the device log supplied an actual segmentation-fault traceback
+pointing to the self-rescheduling `ui.delay(lambda: self.tick(generation), 2.0)`
+callback. Three complete lookup/render cycles precede the fault; motion remains
+below its ten-second fitting window. Thus the observed stack/checkpoints implicate
+callback dispatch, not a zero-velocity division. Earlier native memory corruption
+cannot be ruled out from a Python stack alone.
+
+Use Pythonista's view-owned `update` / `update_interval` API instead of delayed
+closures. Retain immediate first acquisition, disable periodic updates on every
+stop/close/error path, and prevent reentrant ticks or late Start actions on a
+closed view. Keep diagnostic/native logging and identify the scheduler in session
+metadata. This removes the observed callback mechanism without changing TinyGeo
+lookup/motion mathematics, the dataset, or its wheel. Preserve the original logs
+privately and provide a single pasteable script for the next device trial.
+
+Backtrace: commit `660aed7` contains the instrumented delayed-loop source.
+Desktop lifecycle/replay tests validate the replacement control flow; only a
+device retry can establish whether it resolves this native crash.
