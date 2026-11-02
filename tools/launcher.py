@@ -51,3 +51,18 @@ def wrap_launcher(source):
             break
     lines = source.splitlines(keepends=True)
     return (''.join(lines[:offset]) + '\n' + LOCAL_RUNTIME + ''.join(lines[offset:])).encode('utf-8')
+
+
+def tracker_launcher(source, *, diagnostics=False):
+    """Generate normal/debug tracker scripts from the same maintained source."""
+    tree = ast.parse(source.decode('utf-8') if isinstance(source, bytes) else source)
+    expected = {'DIAGNOSTICS', 'CAPTURE_NATIVE_FAULTS'}
+    found = set()
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name) and node.targets[0].id in expected):
+            found.add(node.targets[0].id)
+            node.value = ast.Constant(bool(diagnostics))
+    if found != expected:
+        raise ValueError('tracker source is missing its diagnostic configuration flags')
+    return wrap_launcher(ast.unparse(tree)+'\n')

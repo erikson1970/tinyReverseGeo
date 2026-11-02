@@ -24,7 +24,7 @@ from tools.geodb import (ALGORITHM, ATTRIBUTION, BASE_URL, LICENSE_URL, Candidat
 from tinygeo import Gazetteer
 from tinygeo.lookup import SETTLEMENTS
 from tools.radii import density_config, estimate_radius
-from tools.launcher import wrap_launcher
+from tools.launcher import tracker_launcher, wrap_launcher
 
 PROFILES = {"pythonista": {"python_min": "3.10", "scan_pairs": 65_536},
             "python": {"python_min": "3.10", "scan_pairs": 262_144}}
@@ -115,7 +115,7 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
                        "gzip_target_bytes": 1_000_000, "gzip_target_met": len(compressed) <= 1_000_000}
     payload["smoke_test.py"] = wrap_launcher(SMOKE)
     payload["benchmark_deployed.py"] = wrap_launcher((ROOT / "tools/benchmark_lookup.py").read_bytes())
-    payload["pythonista_track.py"] = wrap_launcher((ROOT / "examples/pythonista_track.py").read_bytes())
+    payload["pythonista_track.py"] = tracker_launcher((ROOT / "examples/pythonista_track.py").read_bytes())
     payload["TRACKING.md"] = (ROOT / "docs/tracking.md").read_bytes()
     instructions = (f"TinyGeo deployment: {target}, {layout}, {dataset['record_count']} references.\n\n"
                     "Requires Python >=3.10 and NumPy >=1.21.6; no SciPy/geopy or network at runtime.\n"
@@ -127,6 +127,8 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
                     "Nearby references are approximate context; their country/region is not query containment.\n"
                     "The source set and feature coverage are described in build-report.json.\n"
                     "Run pythonista_track.py for the foreground track prototype; see TRACKING.md.\n"
+                    "Tracking uses View.update at 2-second intervals; routine diagnostics/native-fault capture are off.\n"
+                    "Accepted fixes/events are saved locally; Python errors retain tracebacks in track_history/errors.log.\n"
                     "The UI, battery use, backgrounding and screen-lock behavior need physical-device testing.\n\n"
                     + dataset["attribution"] + "\n" + LICENSE_URL + "\n")
     payload["README.txt"] = instructions.encode("utf-8")
@@ -139,6 +141,9 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
                 "profile": profile, "runtime_dependencies": ["numpy>=1.21.6"],
                 "dataset_id": dataset["dataset_id"], "record_count": dataset["record_count"],
                 "feature_count": dataset.get("feature_count", dataset["record_count"]),
+                "companion": {"scheduler": "View.update", "update_interval_seconds": 2.0,
+                              "diagnostics_default": False, "native_fault_capture_default": False,
+                              "motion_enabled": True},
                 "dataset_sha256": sha256(compressed).hexdigest(),
                 "files_sha256": {name: sha256(content).hexdigest() for name, content in sorted(payload.items())}}
     payload["manifest.json"] = canonical_json(manifest)
@@ -158,6 +163,7 @@ def write_bundle(output, dataset, report, lock, *, target, layout):
         temporary.unlink(missing_ok=True)
     for name in ("manifest.json", "build-report.json", "source-lock.json"):
         (output / name).write_bytes(payload[name])
+    (output / "pythonista_track.py").write_bytes(payload["pythonista_track.py"])
     (output / "dataset.json.gz").write_bytes(compressed)
     if layout == "embedded":
         (output / "tinygeo.py").write_bytes(payload["tinygeo.py"])

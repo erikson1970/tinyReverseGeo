@@ -244,3 +244,24 @@ privately and provide a single pasteable script for the next device trial.
 Backtrace: commit `660aed7` contains the instrumented delayed-loop source.
 Desktop lifecycle/replay tests validate the replacement control flow; only a
 device retry can establish whether it resolves this native crash.
+
+## D014 — Promote the successful scheduler with quiet deployment defaults
+
+The 2026-11-02 retry records 57 fixes across 116.785 seconds, 58 completed update
+cycles, 54 three-horizon forecast sets, and a clean Stop. No error records or new
+native faults appear. Motion was enabled throughout. Promote `View.update` to the
+deployed companion while keeping the adjacent-runtime bootstrap and Python error
+containment. Disable verbose checkpoints and native-fault capture by default;
+continue saving fixes, event summaries, and exception tracebacks.
+
+Generate normal and diagnostic launchers from the same maintained source with
+explicit build-time flag specialization. Include scheduler/defaults in the
+manifest and emit the normal script beside the ZIP for app-only phone updates.
+Keep the standalone debug variant available. This promotion changes application
+scripts and packaging, not core lookup/motion code or geographic data.
+
+Two early estimates report about 1.23 and 0.87 m/s before becoming stationary.
+GPS settling could contribute, but this log is not ground truth for motion
+calibration. Leave thresholds unchanged pending more route/device evidence.
+The short successful trial does not establish long-duration, background, screen
+lock, battery, or all-device reliability. Preserve the raw logs privately.

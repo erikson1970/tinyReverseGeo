@@ -26,6 +26,14 @@ The smoke test does not request location access. Live UI/GPS behavior, exact
 Pythonista/Python/NumPy versions, and device timing/battery measurements remain
 unverified.
 
+On 2026-11-02 the view-owned update loop subsequently passed a short foreground
+trial: 57 fixes over approximately 117 seconds, successful moving/stationary
+forecasts, and a clean Stop. Device metadata identified Python 3.10.4 and NumPy
+1.22.3. Deployment now uses that scheduler with routine diagnostics/native fault
+capture off, while retaining local history and Python error logs. See the
+[device results and remaining checks](tracking.md). Longer recording, screen lock,
+background behavior, battery use, and broad device coverage remain unverified.
+
 ## Make a portable bundle on desktop
 
 From the repository root:

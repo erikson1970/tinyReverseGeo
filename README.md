@@ -6,8 +6,9 @@ for the full project design and acceptance criteria.
 **Status:** the development package bundles six synthetic test/demo references.
 The [deployer](docs/deployer.md) now builds real GeoNames databases and offline
 application bundles with a requested point count. Track summaries, spherical motion
-estimates, and a foreground Pythonista companion prototype are implemented. Device
-validation of the new UI remains pending. An initial geographic comparison is
+estimates, and a foreground Pythonista companion prototype are implemented.
+The revised UI passed a short foreground iPhone recording/forecast/Stop trial;
+longer recording and battery/background validation remain pending. An initial geographic comparison is
 available in [docs/evaluation.md](docs/evaluation.md). Synthetic lookups are explicitly
 labeled; deployment artifacts carry their real source provenance.
 
@@ -73,6 +74,11 @@ ZIP, preserve its folder structure, and run `smoke_test.py` then
 `pythonista_track.py`. See [the tracking guide](docs/tracking.md) for Start/Stop,
 local history, and device-testing limitations. Other `dist/` builds are checkpoints
 or regional experiments.
+
+The deployed tracker uses view-owned periodic updates and quiet logging defaults;
+Python errors still save tracebacks. Each build folder also provides an app-only
+`pythonista_track.py` for updating an existing phone installation. The standalone
+`dist/pythonista_track_debug.py` enables detailed diagnostics when needed.
 
 ## Skill for a sandboxed LLM
 

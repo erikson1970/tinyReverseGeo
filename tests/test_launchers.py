@@ -80,3 +80,30 @@ assert sys.modules['tinygeo'] is old
 '''
     subprocess.run([sys.executable, '-I', '-c', code], capture_output=True,
                    text=True, check=True, timeout=30)
+
+
+@pytest.mark.parametrize('debug', [True, False])
+def test_tracker_variant_has_explicit_diagnostic_defaults(tmp_path, debug):
+    from tools.launcher import tracker_launcher
+    folder = tmp_path/'tinygeo'
+    folder.mkdir()
+    (folder/'__init__.py').write_text('')
+    script = '''"""Variant test."""
+DIAGNOSTICS = False
+CAPTURE_NATIVE_FAULTS = False
+ENABLE_MOTION = True
+class Session:
+    def __init__(self, diagnostics=None):
+        self.diagnostics = DIAGNOSTICS if diagnostics is None else diagnostics
+'''
+    path = tmp_path/'pythonista_track.py'
+    path.write_bytes(tracker_launcher(script, diagnostics=debug))
+    code = f'''
+import runpy
+app = runpy.run_path({str(path)!r})
+assert app['DIAGNOSTICS'] is {debug!r}
+assert app['CAPTURE_NATIVE_FAULTS'] is {debug!r}
+assert app['ENABLE_MOTION'] is True
+assert app['Session']().diagnostics is {debug!r}
+'''
+    subprocess.run([sys.executable,'-I','-c',code],cwd=tmp_path,check=True,capture_output=True,text=True)

@@ -21,10 +21,10 @@ from uuid import uuid4
 import numpy as np
 from tinygeo import TrackTracker, estimate_motion, project_motion
 
-# Diagnostic device trial: set ENABLE_MOTION=False to isolate lookup/UI capture.
-DIAGNOSTICS = True
+# Normal foreground operation; the debug launcher enables the diagnostic flags.
+DIAGNOSTICS = False
 ENABLE_MOTION = True
-CAPTURE_NATIVE_FAULTS = True
+CAPTURE_NATIVE_FAULTS = False
 
 
 def _safe_log_value(value):
@@ -44,7 +44,7 @@ class TrackSession:
 
     def __init__(self, provider, directory, *, gazetteer=None, clock=time.time,
                  max_accuracy_m=200, max_fix_age_seconds=30, track_options=None, motion_options=None,
-                 diagnostics=True, motion_enabled=True):
+                 diagnostics=None, motion_enabled=True):
         self.provider, self.directory, self.clock = provider, Path(directory), clock
         if any(not isinstance(v, Real) or isinstance(v, bool) or not math.isfinite(v) or v <= 0
                for v in (max_accuracy_m, max_fix_age_seconds)):
@@ -59,7 +59,8 @@ class TrackSession:
         self.last_seen = self.last_fix = self.current = self.annotation = None
         self.motion, self.forecasts = estimate_motion([], []), []
         self.status, self._last_rejection = 'Stopped', None
-        self.diagnostics, self.motion_enabled = diagnostics, motion_enabled
+        self.diagnostics = DIAGNOSTICS if diagnostics is None else diagnostics
+        self.motion_enabled = motion_enabled
         self._sequence, self._phase, self.last_error = 0, 'created', None
 
     def diagnostic(self, stage, **details):

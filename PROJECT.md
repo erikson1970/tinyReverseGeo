@@ -292,13 +292,15 @@ Optional: generate a map of selected locations and a geographic error/coverage h
 
 Implemented prototype: `describe_track` / `TrackTracker`, spherical motion and
 three forecast horizons, foreground Start/Stop UI, local JSON Lines capture,
-journal replay, and CSV export. Desktop replay/acquisition tests pass. The checklist
+journal replay, and CSV export. Desktop replay/acquisition tests pass. A short
+foreground iPhone trial on 2026-11-02 also passed after switching to `View.update`:
+57 fixes, working forecasts, and a clean Stop. The checklist
 below remains the physical-device release acceptance list; it is not a claim that
 background recording or a production iOS release has been verified.
 
 Deliver a versioned, importable Pythonista bundle that uses the shared TinyGeo
 library and offline gazetteer on iPhone/iPad. A foreground prototype and shared
-track/motion APIs now exist; physical-device verification remains pending and is
+track/motion APIs now exist; broader physical-device verification remains pending and is
 not an additional gate for desktop v1. See [docs/tracking.md](docs/tracking.md).
 
 ### Compatibility and packaging recommendation

@@ -125,6 +125,9 @@ def test_end_to_end_offline_build(source, tmp_path, monkeypatch, layout, target)
     original = archive.read_bytes()
     assert manifest["record_count"] == 12
     assert len(manifest["runtime_dependencies"]) == 1
+    assert manifest['companion']['scheduler'] == 'View.update'
+    assert manifest['companion']['diagnostics_default'] is False
+    assert manifest['companion']['native_fault_capture_default'] is False
     main(arguments + ["--lock", str(output / "source-lock.json")])
     assert archive.read_bytes() == original
     extracted = tmp_path / "extracted"
@@ -133,6 +136,7 @@ def test_end_to_end_offline_build(source, tmp_path, monkeypatch, layout, target)
         assert not any("geopy" in n or "scipy" in n or n.startswith("tools/") for n in bundle.namelist())
     for name, expected in manifest["files_sha256"].items():
         assert sha256((extracted / name).read_bytes()).hexdigest() == expected
+    assert (output/'pythonista_track.py').read_bytes() == (extracted/'pythonista_track.py').read_bytes()
     script = f"""
 import sys
 sys.path.insert(0, {str(extracted)!r})
@@ -156,6 +160,11 @@ for reference in db.records:
     else:
         assert reference.country_code is None
         assert reference.region is None
+import runpy
+app = runpy.run_path({str(extracted/'pythonista_track.py')!r}, run_name='companion_test')
+assert app['DIAGNOSTICS'] is False
+assert app['CAPTURE_NATIVE_FAULTS'] is False
+assert app['ENABLE_MOTION'] is True
 """
     subprocess.run([sys.executable, "-I", "-c", script], check=True, capture_output=True, text=True)
     subprocess.run([sys.executable, str(extracted / "smoke_test.py")], cwd=extracted,

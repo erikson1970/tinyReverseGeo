@@ -2,15 +2,15 @@
 
 The shared NumPy-only runtime now supports desktop replay and a foreground
 Pythonista companion prototype. Its acquisition/controller is tested with a
-simulated provider. **The live iOS trial is in progress; an unexpected exit is
-being investigated (see below).**
+simulated provider. **A short live iOS trial passed after replacing the delayed
+callback loop with view-owned updates (see the device results below).**
 On 2026-10-31 the user reported a successful Pythonista smoke test of the real
 10,000-record dataset `tinygeo-c5f36386a63bde416304`, after the launcher import fix.
 That test covered package/data loading, fuzzy lookup, batch/polar/dateline cases,
-and basic track-summary/stationary-forecast assertions. Initial live capture/UI
-operation is reported, but sustained recording and measured performance remain
-to be verified. The
-printed Boston result uses the smoke test's fixed coordinates, not a device fix.
+and basic track-summary/stationary-forecast assertions. On 2026-11-02 the revised
+UI recorded 57 fixes over approximately 117 seconds, produced motion forecasts,
+and stopped cleanly. Longer recordings, battery use, and background behavior
+remain unverified. The smoke test's Boston result uses fixed coordinates.
 
 ## Pythonista quick start
 
@@ -42,6 +42,13 @@ Tap **Start** and allow location access. The view shows the latest fix/time/age,
 nearby references and bearings, observed context history, recent speed/course,
 and extrapolated context 15 minutes, 1 hour, and 2 hours from the fix time.
 Tap **Stop**, or close the view, to stop location updates and close the journal.
+
+Normal deployed scripts use `View.update` at two-second intervals with motion
+enabled. `DIAGNOSTICS = False` and `CAPTURE_NATIVE_FAULTS = False` keep verbose
+checkpoints and native signal handlers off. Fixes, stable reference labels, final
+summaries, and Python exception tracebacks remain saved. The manifest's `companion`
+section identifies these defaults. An app-only `pythonista_track.py` is also
+written beside each build ZIP for copying into an existing installation.
 
 Keep Pythonista open in the foreground. Continuous background/screen-lock
 recording is not promised. Long pauses create gaps on resume. Device tests still
@@ -168,7 +175,8 @@ contents of `dist/pythonista_track_debug.py`, in the existing extracted folder.
 The standalone diagnostic script includes the adjacent-runtime import fix and
 uses the existing library/database. No new ZIP or data transfer is required.
 Its source is maintained in `examples/pythonista_track.py`; build the standalone
-file with `tools.launcher.wrap_launcher` when updating it.
+debug file with `tools.launcher.tracker_launcher(source, diagnostics=True)`.
+The normal deployed variant uses the same source with diagnostics=False.
 
 The diagnostic version writes flushed `diagnostic` checkpoints to each session's
 JSONL journal around location reads, track/lookup calls, motion estimation and
@@ -218,8 +226,30 @@ and stale generations are ignored. Diagnostics remain enabled, and new metadata
 identifies `diagnostic_version: 2` / `ui_scheduler: "View.update"`. Keep motion
 enabled for the next comparison. Desktop tests cover repeated updates through
 stationary forecasts, rapid Start/Stop, restart/close, and reentrant callbacks;
-the new scheduler still needs the device retry.
+the device results below record the subsequent retry.
 
 Copy the updated `dist/pythonista_track_debug.py` contents over the phone script;
 the existing library, database, and ZIP do not need replacement.
 Reference: [Pythonista View.update](https://omz-software.com/pythonista/docs-3.4/py3/ios/ui.html#ui.View.update).
+
+### Successful retry and deployment defaults (2026-11-02)
+
+The subsequent device journal reports `View.update`, diagnostic version 2, Python
+3.10.4 / NumPy 1.22.3, and motion enabled. It contains 57 accepted fixes spanning
+116.785 seconds, 58 complete update cycles, and a normal Stop/provider-stop/final
+summary. There are no Python error records and no new native faults in this run.
+The shared native log is append-only and still contains the earlier crash.
+
+Motion results comprise four insufficient-history, two moving, and 52 stationary
+estimates. Fifty-four cycles produced all three forecast horizons. Early moving
+estimates were approximately 1.23 and 0.87 m/s while reported accuracy was settling;
+these could reflect startup jitter or motion. This short trial does not establish
+a new stationary threshold, so the deployment keeps the existing configurable
+motion model and thresholds.
+
+Promote the view-owned scheduler and error containment into both deployment
+layouts. Keep verbose/native diagnostics available through the standalone debug
+variant. Preserve the real dataset bytes and core wheel: the validated change is
+in the application launcher. A longer field trial is still needed before claiming
+continuous/background recording or battery performance. Private device coordinates
+and raw journals are excluded from source control and distributed bundles.

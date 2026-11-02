@@ -25,7 +25,7 @@ def session(tmp_path):
     db = Gazetteer([Reference('a', 'Alpha, City', 0, 0, 'town')], dataset_id='test-data')
     clock = [100.]
     provider = Provider()
-    session = companion.TrackSession(provider, tmp_path/'history', gazetteer=db, clock=lambda:clock[0])
+    session = companion.TrackSession(provider, tmp_path/'history', gazetteer=db, clock=lambda:clock[0], diagnostics=True)
     return session, provider, clock
 
 
@@ -315,3 +315,24 @@ def test_view_owned_updates_stationary_forecasts_restart_and_close(session, monk
     companion.main()
     assert provider.starts == 2 and provider.stops == 2
     assert not [r for r in companion.history_entries(s.path) if r['type']=='error']
+
+
+def test_normal_defaults_keep_fix_history_and_python_errors_without_checkpoints(session):
+    old, provider, clock = session
+    s = companion.TrackSession(provider, old.directory, gazetteer=old.db, clock=lambda:clock[0])
+    assert not s.diagnostics and s.motion_enabled
+    assert companion.DIAGNOSTICS is False and companion.CAPTURE_NATIVE_FAULTS is False
+    s.start()
+    for stamp in (100, 110, 120):
+        clock[0] = stamp; provider.fix = fix(stamp)
+        assert s.poll()
+    rows = list(companion.history_entries(s.path))
+    assert rows[0]['diagnostics'] is False
+    assert len([r for r in rows if r['type']=='fix']) == 3
+    assert not any(r['type']=='diagnostic' for r in rows)
+    assert s.motion['status']=='stationary' and len(s.forecasts)==3
+    def fail(): raise RuntimeError('normal-mode error logging')
+    provider.get_location = fail
+    with pytest.raises(RuntimeError): s.poll()
+    assert any(r['type']=='error' for r in companion.history_entries(s.path))
+    assert (s.directory/'errors.log').exists()

@@ -22,6 +22,7 @@ bulk downloads need no GeoNames API username. The output is
 | File | Purpose |
 |---|---|
 | `tinygeo.zip` | Complete deployable bundle, including smoke test and attribution |
+| `pythonista_track.py` | App-only launcher for copying into an existing installation |
 | `dataset.json.gz` | Standalone dataset for inspection or `Gazetteer.from_file` |
 | `source-lock.json` | Checksums, URLs, and acquisition metadata for input snapshots |
 | `manifest.json` | Target/profile, runtime file hashes, dataset ID and count |
@@ -32,7 +33,9 @@ that extracted folder into its script library and run `smoke_test.py`. Use
 `from tinygeo import locate, locate_many, dataset_info` in other scripts beside it.
 Run the included `pythonista_track.py` for the foreground companion prototype.
 `TRACKING.md` explains local history, replay/export, and motion extrapolations.
-The UI still needs physical-device validation.
+The view-owned update loop passed a short foreground device trial; longer
+recordings, battery, interruptions, and background behavior still need validation.
+The `companion` manifest section records the scheduler and logging defaults.
 
 **Default-source limitation:** `cities500` primarily supplies settlements. It does
 not supply worldwide mountain/landmark coverage. The report marks settlement-only
